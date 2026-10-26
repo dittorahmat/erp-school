@@ -514,23 +514,43 @@ export const odooShellHtml = `<!DOCTYPE html>
         var data = json.data || [];
 
         var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-          '<div class="p-3.5 border-b border-slate-200"><h3 class="font-bold text-slate-800 text-xs">Daftar Barang & Aset Sekolah</h3></div>' +
+          '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+            '<h3 class="font-bold text-slate-800 text-xs">Daftar Barang & Aset Sekolah</h3>' +
+            '<button onclick="navigate(\'inventory\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+          '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
-              '<tr><th class="px-5 py-2.5">Nama Produk / Item</th><th class="px-5 py-2.5">Kode</th><th class="px-5 py-2.5">Tipe</th><th class="px-5 py-2.5">Satuan</th><th class="px-5 py-2.5">Harga Standar</th><th class="px-5 py-2.5">Nomor Seri Aset</th></tr>' +
+              '<tr>' +
+                '<th class="px-5 py-2.5">Nama Produk / Item</th>' +
+                '<th class="px-5 py-2.5">Kode</th>' +
+                '<th class="px-5 py-2.5">Tipe</th>' +
+                '<th class="px-5 py-2.5">Satuan</th>' +
+                '<th class="px-5 py-2.5">Harga Standar</th>' +
+                '<th class="px-5 py-2.5">Nomor Seri Aset</th>' +
+                '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+              '</tr>' +
             '</thead>' +
             '<tbody class="divide-y divide-slate-100">';
 
-        data.forEach(function(p) {
-          html += '<tr class="hover:bg-slate-50">' +
-            '<td class="px-5 py-3 font-bold text-slate-800">' + p.name + '</td>' +
-            '<td class="px-5 py-3 font-mono">' + p.code + '</td>' +
-            '<td class="px-5 py-3 uppercase">' + p.type + '</td>' +
-            '<td class="px-5 py-3">' + p.uom + '</td>' +
-            '<td class="px-5 py-3">Rp ' + (p.standardPrice || 0).toLocaleString('id-ID') + '</td>' +
-            '<td class="px-5 py-3 font-mono text-slate-500">' + (p.serialNumber || '-') + '</td>' +
-          '</tr>';
-        });
+        if (data.length === 0) {
+          html += '<tr><td colspan="7" class="text-center py-8 text-slate-400">Belum ada data barang / aset.</td></tr>';
+        } else {
+          data.forEach(function(p) {
+            var productJson = JSON.stringify(p).replace(/"/g, '&quot;');
+            html += '<tr class="hover:bg-slate-50 transition">' +
+              '<td class="px-5 py-3 font-bold text-slate-800">' + p.name + '</td>' +
+              '<td class="px-5 py-3 font-mono">' + p.code + '</td>' +
+              '<td class="px-5 py-3 uppercase">' + p.type + '</td>' +
+              '<td class="px-5 py-3">' + p.uom + '</td>' +
+              '<td class="px-5 py-3">Rp ' + (p.standardPrice || 0).toLocaleString('id-ID') + '</td>' +
+              '<td class="px-5 py-3 font-mono text-slate-500">' + (p.serialNumber || '-') + '</td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick=\'openEditProductModal(' + productJson + ')\' class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteProduct(\'' + p.id + '\', \'' + p.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
+            '</tr>';
+          });
+        }
 
         html += '</tbody></table></div>';
         document.getElementById('main-content').innerHTML = html;
@@ -547,6 +567,8 @@ export const odooShellHtml = `<!DOCTYPE html>
         content.innerHTML = renderStudentFormHtml({});
       } else if (state.currentView === 'academics') {
         content.innerHTML = renderAcademicYearFormHtml({});
+      } else if (state.currentView === 'inventory') {
+        content.innerHTML = renderProductFormHtml({});
       } else {
         content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Item / Dokumen</label><input id="form-name" type="text" placeholder="Nama..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none"></div>';
       }
@@ -567,6 +589,59 @@ export const odooShellHtml = `<!DOCTYPE html>
       var content = document.getElementById('modal-form-content');
       content.innerHTML = renderAcademicYearFormHtml(year);
       document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openEditProductModal(product) {
+      document.getElementById('edit-record-id').value = product.id;
+      document.getElementById('modal-title').innerText = 'Edit Produk / Aset';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderProductFormHtml(product);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function renderProductFormHtml(p) {
+      var typeVal = p.type || 'storable';
+      var uomVal = p.uom || 'pcs';
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Produk / Barang *</label>' +
+          '<input id="form-name" type="text" value="' + (p.name || '') + '" placeholder="e.g. Meja Belajar Siswa" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Kode Produk *</label>' +
+          '<input id="form-prod-code" type="text" value="' + (p.code || '') + '" placeholder="e.g. AST-MJ01" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tipe Produk</label>' +
+            '<select id="form-prod-type" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="storable"' + (typeVal === 'storable' ? ' selected' : '') + '>Storable (Barang Stok)</option>' +
+              '<option value="consumable"' + (typeVal === 'consumable' ? ' selected' : '') + '>Consumable (Barang Habis Pakai)</option>' +
+              '<option value="service"' + (typeVal === 'service' ? ' selected' : '') + '>Service (Jasa)</option>' +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Satuan / UoM</label>' +
+            '<select id="form-prod-uom" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="pcs"' + (uomVal === 'pcs' ? ' selected' : '') + '>pcs</option>' +
+              '<option value="unit"' + (uomVal === 'unit' ? ' selected' : '') + '>unit</option>' +
+              '<option value="set"' + (uomVal === 'set' ? ' selected' : '') + '>set</option>' +
+              '<option value="rim"' + (uomVal === 'rim' ? ' selected' : '') + '>rim</option>' +
+              '<option value="box"' + (uomVal === 'box' ? ' selected' : '') + '>box</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Harga Standar (Rp)</label>' +
+            '<input id="form-prod-standard-price" type="number" value="' + (p.standardPrice !== undefined ? p.standardPrice : 0) + '" placeholder="0" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Nomor Seri Aset (Opsional)</label>' +
+            '<input id="form-prod-serial" type="text" value="' + (p.serialNumber || '') + '" placeholder="e.g. SN-123456" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+      '</div>';
     }
 
     function renderAcademicYearFormHtml(y) {
@@ -759,11 +834,49 @@ export const odooShellHtml = `<!DOCTYPE html>
             }
           }
         } else if (state.currentView === 'inventory') {
-          await fetch('/api/inventory/products', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ schoolId: 'sch_smp_01', name: nameVal, code: 'PRD-' + Math.floor(Math.random() * 900 + 100), standardPrice: 50000, type: 'storable' })
-          });
+          var prodCodeInput = document.getElementById('form-prod-code');
+          var prodTypeInput = document.getElementById('form-prod-type');
+          var prodUomInput = document.getElementById('form-prod-uom');
+          var prodPriceInput = document.getElementById('form-prod-standard-price');
+          var prodSerialInput = document.getElementById('form-prod-serial');
+
+          var prodCodeVal = prodCodeInput && prodCodeInput.value.trim() ? prodCodeInput.value.trim() : ('PRD-' + Math.floor(Math.random() * 900 + 100));
+          var prodTypeVal = prodTypeInput ? prodTypeInput.value : 'storable';
+          var prodUomVal = prodUomInput ? prodUomInput.value : 'pcs';
+          var prodPriceVal = prodPriceInput ? Number(prodPriceInput.value) : 0;
+          var prodSerialVal = prodSerialInput && prodSerialInput.value.trim() ? prodSerialInput.value.trim() : null;
+
+          var prodPayload = {
+            schoolId: 'sch_smp_01',
+            name: nameVal,
+            code: prodCodeVal,
+            type: prodTypeVal,
+            uom: prodUomVal,
+            standardPrice: prodPriceVal,
+            serialNumber: prodSerialVal
+          };
+
+          if (editId) {
+            var updateProdRes = await fetch('/api/inventory/products/' + editId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(prodPayload)
+            });
+            if (!updateProdRes.ok) {
+              var errData = await updateProdRes.json();
+              throw new Error(errData.error || 'Gagal mengupdate produk');
+            }
+          } else {
+            var createProdRes = await fetch('/api/inventory/products', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(prodPayload)
+            });
+            if (!createProdRes.ok) {
+              var errData = await createProdRes.json();
+              throw new Error(errData.error || 'Gagal menambahkan produk');
+            }
+          }
         }
         closeCreateModal();
         navigate(state.currentView);
@@ -805,6 +918,24 @@ export const odooShellHtml = `<!DOCTYPE html>
         renderAcademics();
       } catch (err) {
         alert('Gagal menghapus tahun ajaran: ' + err.message);
+      }
+    }
+
+    async function deleteProduct(productId, productName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus barang/produk "' + productName + '"? Data yang dihapus tidak dapat dikembalikan.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/inventory/products/' + productId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus produk');
+        }
+        renderInventory();
+      } catch (err) {
+        alert('Gagal menghapus produk: ' + err.message);
       }
     }
 
