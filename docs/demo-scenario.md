@@ -151,5 +151,5 @@ Tersedia skrip otomatis di [`package.json`](file:///D:/development/erp-school/pa
 
 - [x] Database lokal/remote Cloudflare D1 telah dieksekusi seeder terbaru (`src/db/seed.sql`).
 - [x] Jalankan verifikasi kode: `npm run typecheck` (0 error).
-- [x] Jalankan rangkaian unit test otomatis: `npm test` (Seluruh 9 test file / 51 test lolos).
+- [x] Jalankan rangkaian unit & E2E integration test otomatis: `npm test` (Seluruh 10 test file / 62 test lolos, termasuk `tests/e2e-demo-scenario.test.ts`).
 - [x] Server dev aktif di terminal: `npm run dev` (port default `8787`).
