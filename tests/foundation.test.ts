@@ -19,4 +19,18 @@ describe("Foundation Tracer Bullet - Cloudflare Monolith", () => {
     expect(html).toContain("Odoo Control Panel");
     expect(html).toContain("SMA Harapan Bangsa");
   });
+
+  it("should ensure client-side embedded JavaScript in shell HTML has zero syntax errors", async () => {
+    const res = await app.request("/");
+    const html = await res.text();
+    const s = html.indexOf("<script", 1000);
+    expect(s).toBeGreaterThan(-1);
+    const start = html.indexOf(">", s) + 1;
+    const end = html.indexOf("</script>", start);
+    expect(end).toBeGreaterThan(start);
+    const clientJs = html.slice(start, end);
+
+    // Validate that browser JavaScript engine can parse clientJs without any SyntaxError
+    expect(() => new Function(clientJs)).not.toThrow();
+  });
 });

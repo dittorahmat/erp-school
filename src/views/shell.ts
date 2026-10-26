@@ -354,22 +354,22 @@ export const odooShellHtml = `<!DOCTYPE html>
 
     async function renderDashboard() {
       var html = '<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">' +
-        '<div onclick="navigate(\\'students\\')" class="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">' +
+        '<div onclick="navigate(&apos;students&apos;)" class="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">' +
           '<div class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Total Siswa Aktif</div>' +
           '<div class="text-2xl font-bold text-slate-800 mt-1">50</div>' +
           '<div class="text-xs text-emerald-700 mt-1 font-medium">100% Terdaftar</div>' +
         '</div>' +
-        '<div onclick="navigate(\\'attendance\\')" class="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">' +
+        '<div onclick="navigate(&apos;attendance&apos;)" class="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">' +
           '<div class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Kehadiran Hari Ini</div>' +
           '<div class="text-2xl font-bold text-slate-800 mt-1">96.8%</div>' +
           '<div class="text-xs text-emerald-700 mt-1 font-medium">48 Hadir / 2 Izin</div>' +
         '</div>' +
-        '<div onclick="navigate(\\'finance\\')" class="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">' +
+        '<div onclick="navigate(&apos;finance&apos;)" class="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">' +
           '<div class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Invoice SPP Terbayar</div>' +
           '<div class="text-2xl font-bold text-slate-800 mt-1">Rp 22.500.000</div>' +
           '<div class="text-xs text-slate-600 mt-1">45 dari 50 Siswa</div>' +
         '</div>' +
-        '<div onclick="navigate(\\'inventory\\')" class="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">' +
+        '<div onclick="navigate(&apos;inventory&apos;)" class="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">' +
           '<div class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Stok Barang Gudang</div>' +
           '<div class="text-2xl font-bold text-slate-800 mt-1">142 Item</div>' +
           '<div class="text-xs text-slate-600 mt-1">Seragam & Buku</div>' +
@@ -407,7 +407,7 @@ export const odooShellHtml = `<!DOCTYPE html>
         var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
           '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
             '<span class="font-semibold text-xs text-slate-700">Total: ' + data.length + ' Siswa Terdaftar</span>' +
-            '<button onclick="navigate(\\'students\\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+            '<button onclick="navigate(&apos;students&apos;)" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
           '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
@@ -466,7 +466,7 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<span class="font-semibold text-xs text-slate-700">Tahun Ajaran Aktif</span>' +
               '<div class="space-x-2">' +
                 '<button onclick="openCreateAcademicYearModal()" class="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded text-xs font-medium transition"><i class="fa-solid fa-plus text-[10px]"></i> + Tahun Ajaran</button>' +
-                '<button onclick="navigate(\'academics\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+                '<button onclick="navigate(&apos;academics&apos;)" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
               '</div>' +
             '</div>' +
             '<table class="w-full text-left text-xs text-slate-700">' +
@@ -491,8 +491,8 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<td class="px-5 py-3 text-slate-600">' + (y.startDate || '-') + ' s/d ' + (y.endDate || '-') + '</td>' +
               '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (y.status === 'active' ? 'bg-emerald-100 text-emerald-800' : (y.status === 'closed' ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800')) + '">' + y.status + '</span></td>' +
               '<td class="px-5 py-3 text-right space-x-1.5">' +
-                '<button onclick="openEditAcademicYearModal(\'' + y.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
-                '<button onclick="deleteAcademicYear(\'' + y.id + '\', \'' + y.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+                '<button onclick="openEditAcademicYearModal(&apos;' + y.id + '&apos;)" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteAcademicYear(&apos;' + y.id + '&apos;)" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
               '</td>' +
             '</tr>';
           });
@@ -526,8 +526,8 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (sub.type === 'compulsory' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800') + '">' + (sub.type || 'compulsory') + '</span></td>' +
               '<td class="px-5 py-3 text-slate-600">' + (sub.weightage || 100) + '</td>' +
               '<td class="px-5 py-3 text-right space-x-1.5">' +
-                '<button onclick="openEditSubjectModal(\'' + sub.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
-                '<button onclick="deleteSubject(\'' + sub.id + '\', \'' + sub.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+                '<button onclick="openEditSubjectModal(&apos;' + sub.id + '&apos;)" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteSubject(&apos;' + sub.id + '&apos;)" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
               '</td>' +
             '</tr>';
           });
@@ -555,7 +555,7 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<h3 class="font-bold text-slate-800 text-xs">Sesi Presensi Kelas Real-Time</h3>' +
               '<div class="space-x-2">' +
                 '<button onclick="openCreateAttendanceModal()" class="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded text-xs font-medium transition"><i class="fa-solid fa-plus text-[10px]"></i> + Buat Sesi Presensi Baru</button>' +
-                '<button onclick="navigate(\'attendance\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+                '<button onclick="navigate(&apos;attendance&apos;)" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
               '</div>' +
             '</div>' +
             '<table class="w-full text-left text-xs text-slate-700">' +
@@ -612,7 +612,7 @@ export const odooShellHtml = `<!DOCTYPE html>
         var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
           '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
             '<h3 class="font-bold text-slate-800 text-xs">Sesi Ujian Semester Ganjil 2025/2026</h3>' +
-            '<button onclick="navigate(\'exams\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+            '<button onclick="navigate(&apos;exams&apos;)" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
           '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
@@ -647,8 +647,8 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<td class="px-5 py-3">' + (exam.weightage || 30) + '%</td>' +
               '<td class="px-5 py-3">' + statusBadge + '</td>' +
               '<td class="px-5 py-3 text-right space-x-1.5">' +
-                '<button onclick="openEditExamModal(\'' + exam.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
-                '<button onclick="deleteExamSession(\'' + exam.id + '\', \'' + exam.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+                '<button onclick="openEditExamModal(&apos;' + exam.id + '&apos;)" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteExamSession(&apos;' + exam.id + '&apos;)" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
               '</td>' +
             '</tr>';
           });
@@ -681,7 +681,7 @@ export const odooShellHtml = `<!DOCTYPE html>
         '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
           '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
             '<h3 class="font-bold text-slate-800 text-xs">Daftar Tagihan SPP (Invoices)</h3>' +
-            '<button onclick="navigate(\'finance\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+            '<button onclick="navigate(&apos;finance&apos;)" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
           '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
@@ -708,9 +708,9 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<td class="px-5 py-3 text-slate-600">Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '</td>' +
               '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' + (isPaid ? 'Lunas' : 'Belum Lunas') + '</span></td>' +
               '<td class="px-5 py-3 text-right space-x-1.5">' +
-                (!isPaid ? '<button onclick="openPaymentModal(\'' + inv.id + '\')" class="bg-[#714B67] hover:bg-[#583950] text-white px-2 py-1 rounded transition font-semibold">Catat Bayar</button>' : '') +
-                '<button onclick="viewInvoiceDetail(\'' + inv.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Detail</button>' +
-                (!isPaid ? '<button onclick="deleteInvoice(\'' + inv.id + '\', \'' + inv.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' : '') +
+                (!isPaid ? '<button onclick="openPaymentModal(&apos;' + inv.id + '&apos;)" class="bg-[#714B67] hover:bg-[#583950] text-white px-2 py-1 rounded transition font-semibold">Catat Bayar</button>' : '') +
+                '<button onclick="viewInvoiceDetail(&apos;' + inv.id + '&apos;)" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Detail</button>' +
+                (!isPaid ? '<button onclick="deleteInvoice(&apos;' + inv.id + '&apos;)" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' : '') +
               '</td>' +
             '</tr>';
           });
@@ -733,7 +733,7 @@ export const odooShellHtml = `<!DOCTYPE html>
         var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
           '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
             '<h3 class="font-bold text-slate-800 text-xs">Daftar Barang & Aset Sekolah</h3>' +
-            '<button onclick="navigate(\'inventory\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+            '<button onclick="navigate(&apos;inventory&apos;)" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
           '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
@@ -761,8 +761,8 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<td class="px-5 py-3">Rp ' + (p.standardPrice || 0).toLocaleString('id-ID') + '</td>' +
               '<td class="px-5 py-3 font-mono text-slate-500">' + (p.serialNumber || '-') + '</td>' +
               '<td class="px-5 py-3 text-right space-x-1.5">' +
-                '<button onclick="openEditProductModal(\'' + p.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
-                '<button onclick="deleteProduct(\'' + p.id + '\', \'' + p.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+                '<button onclick="openEditProductModal(&apos;' + p.id + '&apos;)" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteProduct(&apos;' + p.id + '&apos;)" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
               '</td>' +
             '</tr>';
           });
@@ -784,8 +784,8 @@ export const odooShellHtml = `<!DOCTYPE html>
       } else if (state.currentView === 'academics') {
         content.innerHTML = '<div class="space-y-4">' +
           '<div class="flex gap-4 border-b border-slate-200 pb-3">' +
-            '<button type="button" onclick="renderAcademicModalTab(\'year\')" id="tab-btn-ay" class="text-xs font-bold px-3 py-1.5 rounded bg-purple-50 text-[#714B67] border border-purple-200">+ Tahun Ajaran</button>' +
-            '<button type="button" onclick="renderAcademicModalTab(\'subject\')" id="tab-btn-subj" class="text-xs font-medium px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 border border-transparent">+ Mata Pelajaran</button>' +
+            '<button type="button" onclick="renderAcademicModalTab(&apos;year&apos;)" id="tab-btn-ay" class="text-xs font-bold px-3 py-1.5 rounded bg-purple-50 text-[#714B67] border border-purple-200">+ Tahun Ajaran</button>' +
+            '<button type="button" onclick="renderAcademicModalTab(&apos;subject&apos;)" id="tab-btn-subj" class="text-xs font-medium px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 border border-transparent">+ Mata Pelajaran</button>' +
           '</div>' +
           '<div id="academic-modal-body">' + renderAcademicYearFormHtml({}) + '</div>' +
         '</div>';
@@ -1542,10 +1542,10 @@ export const odooShellHtml = `<!DOCTYPE html>
 
     function viewInvoiceDetail(id) {
       var inv = state.cache.invoices.find(function(x) { return x.id === id; }) || {};
-      alert('Detail Tagihan ' + (inv.name || id) + ':\n' +
-        'Status Bayar: ' + (inv.paymentState === 'paid' ? 'LUNAS' : 'BELUM LUNAS') + '\n' +
-        'Total: Rp ' + (inv.amountTotal || 0).toLocaleString('id-ID') + '\n' +
-        'Sisa: Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '\n' +
+      alert('Detail Tagihan ' + (inv.name || id) + ':\\n' +
+        'Status Bayar: ' + (inv.paymentState === 'paid' ? 'LUNAS' : 'BELUM LUNAS') + '\\n' +
+        'Total: Rp ' + (inv.amountTotal || 0).toLocaleString('id-ID') + '\\n' +
+        'Sisa: Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '\\n' +
         'Jatuh Tempo: ' + (inv.invoiceDueDate || '-'));
     }
 
