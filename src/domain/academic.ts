@@ -2,7 +2,30 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { desc, eq } from "drizzle-orm";
-import { generateId } from "../lib/utils";
+import { compactDefined, generateId } from "../lib/utils";
+
+export interface AcademicYearInput {
+  id?: string;
+  schoolId?: string;
+  name: string;
+  code: string;
+  startDate?: string;
+  endDate?: string;
+  status?: "draft" | "active" | "closed";
+}
+
+export type UpdateAcademicYearInput = Partial<Omit<AcademicYearInput, "id">>;
+
+export interface SubjectInput {
+  id?: string;
+  schoolId?: string;
+  name: string;
+  code: string;
+  type?: "compulsory" | "elective";
+  weightage?: number;
+}
+
+export type UpdateSubjectInput = Partial<Omit<SubjectInput, "id">>;
 
 export const academicManagement = {
   async getYears(d1: D1Database) {
@@ -16,15 +39,15 @@ export const academicManagement = {
     return results[0] || null;
   },
 
-  async createYear(d1: D1Database, body: any) {
+  async createYear(d1: D1Database, body: AcademicYearInput) {
     const db = drizzle(d1, { schema });
     const newYear = {
       id: body.id || generateId("ay"),
       schoolId: body.schoolId || "sch_smp_01",
       name: body.name,
       code: body.code,
-      startDate: body.startDate,
-      endDate: body.endDate,
+      startDate: body.startDate || "2026-07-01",
+      endDate: body.endDate || "2027-06-30",
       status: body.status || "active",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -33,18 +56,19 @@ export const academicManagement = {
     return newYear;
   },
 
-  async updateYear(d1: D1Database, id: string, data: any) {
+  async updateYear(d1: D1Database, id: string, data: UpdateAcademicYearInput) {
     const db = drizzle(d1, { schema });
-    const updateData: Record<string, any> = {
+    const updateData = {
+      ...compactDefined({
+        name: data.name,
+        code: data.code,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        status: data.status,
+        schoolId: data.schoolId,
+      }),
       updatedAt: new Date(),
     };
-
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.code !== undefined) updateData.code = data.code;
-    if (data.startDate !== undefined) updateData.startDate = data.startDate;
-    if (data.endDate !== undefined) updateData.endDate = data.endDate;
-    if (data.status !== undefined) updateData.status = data.status;
-    if (data.schoolId !== undefined) updateData.schoolId = data.schoolId;
 
     await db.update(schema.academicYears).set(updateData).where(eq(schema.academicYears.id, id));
     return this.getYearById(d1, id);
@@ -67,7 +91,7 @@ export const academicManagement = {
     return results[0] || null;
   },
 
-  async createSubject(d1: D1Database, body: any) {
+  async createSubject(d1: D1Database, body: SubjectInput) {
     const db = drizzle(d1, { schema });
     const newSubject = {
       id: body.id || generateId("subj"),
@@ -75,7 +99,7 @@ export const academicManagement = {
       name: body.name,
       code: body.code,
       type: body.type || "compulsory",
-      weightage: body.weightage || 100,
+      weightage: body.weightage !== undefined ? Number(body.weightage) : 100,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -83,17 +107,18 @@ export const academicManagement = {
     return newSubject;
   },
 
-  async updateSubject(d1: D1Database, id: string, data: any) {
+  async updateSubject(d1: D1Database, id: string, data: UpdateSubjectInput) {
     const db = drizzle(d1, { schema });
-    const updateData: Record<string, any> = {
+    const updateData = {
+      ...compactDefined({
+        name: data.name,
+        code: data.code,
+        type: data.type,
+        weightage: data.weightage !== undefined ? Number(data.weightage) : undefined,
+        schoolId: data.schoolId,
+      }),
       updatedAt: new Date(),
     };
-
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.code !== undefined) updateData.code = data.code;
-    if (data.type !== undefined) updateData.type = data.type;
-    if (data.weightage !== undefined) updateData.weightage = data.weightage;
-    if (data.schoolId !== undefined) updateData.schoolId = data.schoolId;
 
     await db.update(schema.subjects).set(updateData).where(eq(schema.subjects.id, id));
     return this.getSubjectById(d1, id);

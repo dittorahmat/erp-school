@@ -2,7 +2,24 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { desc, eq } from "drizzle-orm";
-import { generateId, calculateGrade } from "../lib/utils";
+import { calculateGrade, compactDefined, generateId } from "../lib/utils";
+
+export interface ExamSessionInput {
+  id?: string;
+  schoolId?: string;
+  academicYearId?: string;
+  termId?: string;
+  classroomId?: string;
+  subjectId?: string;
+  name: string;
+  examDate?: string;
+  totalMarks?: number;
+  passingMarks?: number;
+  weightage?: number;
+  status?: "draft" | "published" | "closed";
+}
+
+export type UpdateExamSessionInput = Partial<Omit<ExamSessionInput, "id">>;
 
 export const examManagement = {
   async getSessions(d1: D1Database) {
@@ -16,7 +33,7 @@ export const examManagement = {
     return results[0] || null;
   },
 
-  async createSession(d1: D1Database, body: any) {
+  async createSession(d1: D1Database, body: ExamSessionInput) {
     const db = drizzle(d1, { schema });
     const newSession = {
       id: body.id || generateId("exam"),
@@ -38,23 +55,24 @@ export const examManagement = {
     return newSession;
   },
 
-  async updateSession(d1: D1Database, id: string, data: any) {
+  async updateSession(d1: D1Database, id: string, data: UpdateExamSessionInput) {
     const db = drizzle(d1, { schema });
-    const updateData: Record<string, any> = {
+    const updateData = {
+      ...compactDefined({
+        name: data.name,
+        schoolId: data.schoolId,
+        academicYearId: data.academicYearId,
+        termId: data.termId,
+        classroomId: data.classroomId,
+        subjectId: data.subjectId,
+        examDate: data.examDate,
+        totalMarks: data.totalMarks !== undefined ? Number(data.totalMarks) : undefined,
+        passingMarks: data.passingMarks !== undefined ? Number(data.passingMarks) : undefined,
+        weightage: data.weightage !== undefined ? Number(data.weightage) : undefined,
+        status: data.status,
+      }),
       updatedAt: new Date(),
     };
-
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.schoolId !== undefined) updateData.schoolId = data.schoolId;
-    if (data.academicYearId !== undefined) updateData.academicYearId = data.academicYearId;
-    if (data.termId !== undefined) updateData.termId = data.termId;
-    if (data.classroomId !== undefined) updateData.classroomId = data.classroomId;
-    if (data.subjectId !== undefined) updateData.subjectId = data.subjectId;
-    if (data.examDate !== undefined) updateData.examDate = data.examDate;
-    if (data.totalMarks !== undefined) updateData.totalMarks = Number(data.totalMarks);
-    if (data.passingMarks !== undefined) updateData.passingMarks = Number(data.passingMarks);
-    if (data.weightage !== undefined) updateData.weightage = Number(data.weightage);
-    if (data.status !== undefined) updateData.status = data.status;
 
     await db.update(schema.examSessions).set(updateData).where(eq(schema.examSessions.id, id));
     return this.getSessionById(d1, id);

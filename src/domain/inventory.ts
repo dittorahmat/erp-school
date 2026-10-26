@@ -2,7 +2,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { desc, eq } from "drizzle-orm";
-import { generateId } from "../lib/utils";
+import { compactDefined, generateId } from "../lib/utils";
 
 export interface StockMoveInput {
   productId: string;
@@ -21,6 +21,20 @@ export interface ExecuteStockTransferParams {
   moves?: StockMoveInput[];
 }
 
+export interface ProductInput {
+  id?: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  type?: "storable" | "consumable" | "service";
+  uom?: string;
+  listPrice?: number;
+  standardPrice?: number;
+  serialNumber?: string | null;
+}
+
+export type UpdateProductInput = Partial<Omit<ProductInput, "id">>;
+
 /**
  * Deep Stock Transfer Module.
  * Encapsulates double-entry physical inventory moves and atomic batch persistence.
@@ -37,7 +51,7 @@ export const stockTransfer = {
     return results[0] || null;
   },
 
-  async createProduct(d1: D1Database, body: any) {
+  async createProduct(d1: D1Database, body: ProductInput) {
     const db = drizzle(d1, { schema });
     const newProduct = {
       id: body.id || generateId("prod"),
@@ -56,20 +70,21 @@ export const stockTransfer = {
     return newProduct;
   },
 
-  async updateProduct(d1: D1Database, id: string, data: any) {
+  async updateProduct(d1: D1Database, id: string, data: UpdateProductInput) {
     const db = drizzle(d1, { schema });
-    const updateData: Record<string, any> = {
+    const updateData = {
+      ...compactDefined({
+        name: data.name,
+        code: data.code,
+        type: data.type,
+        uom: data.uom,
+        listPrice: data.listPrice !== undefined ? Number(data.listPrice) : undefined,
+        standardPrice: data.standardPrice !== undefined ? Number(data.standardPrice) : undefined,
+        serialNumber: data.serialNumber,
+        schoolId: data.schoolId,
+      }),
       updatedAt: new Date(),
     };
-
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.code !== undefined) updateData.code = data.code;
-    if (data.type !== undefined) updateData.type = data.type;
-    if (data.uom !== undefined) updateData.uom = data.uom;
-    if (data.listPrice !== undefined) updateData.listPrice = Number(data.listPrice);
-    if (data.standardPrice !== undefined) updateData.standardPrice = Number(data.standardPrice);
-    if (data.serialNumber !== undefined) updateData.serialNumber = data.serialNumber;
-    if (data.schoolId !== undefined) updateData.schoolId = data.schoolId;
 
     await db.update(schema.products).set(updateData).where(eq(schema.products.id, id));
     return this.getProductById(d1, id);

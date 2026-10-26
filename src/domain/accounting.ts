@@ -9,6 +9,7 @@ export interface CreateInvoiceParams {
   schoolId?: string;
   journalId?: string;
   studentId?: string;
+  partnerId?: string | null;
   name?: string;
   date?: string;
   dueDate?: string | null;
@@ -61,12 +62,13 @@ export const accountingEngine = {
     const db = drizzle(d1, { schema });
     const moveId = params.id || generateId("inv");
     const amount = Number(params.amountTotal || 500000);
+    const studentId = params.studentId || params.partnerId || null;
 
     const move = {
       id: moveId,
       schoolId: params.schoolId || "school_sma_hb",
       journalId: params.journalId || "jrn_sale",
-      studentId: params.studentId,
+      studentId: studentId,
       name: params.name || `INV/${new Date().getFullYear()}/${Date.now().toString().slice(-4)}`,
       date: params.date || new Date().toISOString().split("T")[0],
       moveType: "out_invoice",
@@ -83,7 +85,7 @@ export const accountingEngine = {
       id: generateId("aml_deb"),
       moveId,
       accountId: params.receivableAccountId || "coa_ar",
-      studentId: params.studentId,
+      studentId: studentId,
       name: params.description || "Tagihan SPP Siswa",
       debit: amount,
       credit: 0,
@@ -95,7 +97,7 @@ export const accountingEngine = {
       id: generateId("aml_crd"),
       moveId,
       accountId: params.incomeAccountId || "coa_rev_spp",
-      studentId: params.studentId,
+      studentId: studentId,
       name: params.description || "Pendapatan SPP",
       debit: 0,
       credit: amount,

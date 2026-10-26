@@ -47,3 +47,12 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Kolom SQL D1 wajib berformat `snake_case`, cocokkan dengan pemetaan `drizzle-orm` di `src/db/schema.ts`.
   - Transaksi akuntansi wajib berimbang Debit = Credit (`/api/finance/trial-balance`).
   - Deploy live Cloudflare Workers menggunakan `npm run deploy` via Wrangler.
+- **UI State Lookup Standard**:
+  - **MANDAT KETAT**: Dilarang keras menserialisasi seluruh objek JSON ke dalam inline onclick handler HTML (`onclick="edit(${JSON.stringify(item)})"`).
+  - Wajib mengoper ID item saja (`onclick="edit('${item.id}')"`) dan mengambil datanya dari `state.cache` sisi klien atau query API berdasarkan ID.
+- **HTML Date Inputs**:
+  - Seluruh input form tanggal wajib menggunakan native `<input type="date">` untuk menjamin format ISO 8601 YYYY-MM-DD yang valid dan konsisten.
+- **Domain Type Safety**:
+  - Seluruh metode operasi create/update di domain module (`src/domain/*`) WAJIB memiliki parameter interface bertipe kuat (strongly typed), dilarang menggunakan `body: any` atau `data: any`. Gunakan utilitas compacting (`compactDefined`) untuk pembaruan parsial yang bersih tanpa boilerplate `if (x !== undefined)`.
+- **Dual-Entity Modules View Completeness**:
+  - View yang mengelola master entitas berpasangan atau berkorelasi kuat (seperti Modul Akademik: Tahun Ajaran + Mata Pelajaran / Kurikulum) WAJIB menyediakan antarmuka manajemen UI lengkap untuk kedua entitas tersebut, bukan hanya salah satunya.

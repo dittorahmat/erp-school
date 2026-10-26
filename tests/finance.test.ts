@@ -52,7 +52,7 @@ describe("Double-Entry Accounting API", () => {
     expect(data.data[0].name).toBe("INV/2026/10/001");
   });
 
-  it("should respond with 201 on POST /api/finance/invoices and create balanced entries atomically", async () => {
+  it("should respond with 201 on POST /api/finance/invoices and create balanced entries atomically with partnerId", async () => {
     let batchedStatements: any[] = [];
     const mockD1 = {
       prepare: () => ({
@@ -69,6 +69,7 @@ describe("Double-Entry Accounting API", () => {
 
     const payload = {
       schoolId: "school_sma_hb",
+      partnerId: "std_01",
       name: "INV/2026/10/002",
       date: "2026-10-26",
       dueDate: "2026-11-10",
@@ -91,6 +92,7 @@ describe("Double-Entry Accounting API", () => {
     expect(body.success).toBe(true);
     expect(body.data.amountTotal).toBe(650000);
     expect(body.data.amountResidual).toBe(650000);
+    expect(body.data.studentId).toBe("std_01");
     expect(batchedStatements).toHaveLength(3); // 1 header move + 1 debit line + 1 credit line
   });
 

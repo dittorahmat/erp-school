@@ -2,7 +2,25 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { desc, eq } from "drizzle-orm";
-import { generateId } from "../lib/utils";
+import { compactDefined, generateId } from "../lib/utils";
+
+export interface StudentInput {
+  id?: string;
+  schoolId: string;
+  guardianId?: string | null;
+  nis: string;
+  nisn: string;
+  name: string;
+  gender?: "male" | "female";
+  birthDate?: string | null;
+  birthPlace?: string | null;
+  address?: string | null;
+  avatarUrl?: string | null;
+  documentUrl?: string | null;
+  status?: "active" | "graduated" | "transferred" | "inactive";
+}
+
+export type UpdateStudentInput = Partial<Omit<StudentInput, "id">>;
 
 export const studentManagement = {
   async getStudents(d1: D1Database) {
@@ -16,7 +34,7 @@ export const studentManagement = {
     return results[0] || null;
   },
 
-  async createStudent(d1: D1Database, body: any) {
+  async createStudent(d1: D1Database, body: StudentInput) {
     const db = drizzle(d1, { schema });
     const newStudent = {
       id: body.id || generateId("std"),
@@ -39,23 +57,25 @@ export const studentManagement = {
     return newStudent;
   },
 
-  async updateStudent(d1: D1Database, id: string, data: any) {
+  async updateStudent(d1: D1Database, id: string, data: UpdateStudentInput) {
     const db = drizzle(d1, { schema });
-    const updateData: Record<string, any> = {
+    const updateData = {
+      ...compactDefined({
+        name: data.name,
+        nis: data.nis,
+        nisn: data.nisn,
+        gender: data.gender,
+        birthDate: data.birthDate,
+        birthPlace: data.birthPlace,
+        address: data.address,
+        status: data.status,
+        avatarUrl: data.avatarUrl,
+        documentUrl: data.documentUrl,
+        guardianId: data.guardianId,
+        schoolId: data.schoolId,
+      }),
       updatedAt: new Date(),
     };
-
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.nis !== undefined) updateData.nis = data.nis;
-    if (data.nisn !== undefined) updateData.nisn = data.nisn;
-    if (data.gender !== undefined) updateData.gender = data.gender;
-    if (data.birthDate !== undefined) updateData.birthDate = data.birthDate;
-    if (data.birthPlace !== undefined) updateData.birthPlace = data.birthPlace;
-    if (data.address !== undefined) updateData.address = data.address;
-    if (data.status !== undefined) updateData.status = data.status;
-    if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
-    if (data.documentUrl !== undefined) updateData.documentUrl = data.documentUrl;
-    if (data.guardianId !== undefined) updateData.guardianId = data.guardianId;
 
     await db.update(schema.students).set(updateData).where(eq(schema.students.id, id));
     return this.getStudentById(d1, id);
