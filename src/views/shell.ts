@@ -482,23 +482,42 @@ export const odooShellHtml = `<!DOCTYPE html>
           '<div class="text-right"><span class="text-xs bg-slate-700 px-3 py-1 rounded font-mono">' + (tbJson.lineCount || 0) + ' Journal Lines</span></div>' +
         '</div>' +
         '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-          '<div class="p-3.5 border-b border-slate-200"><h3 class="font-bold text-slate-800 text-xs">Daftar Tagihan SPP (Invoices)</h3></div>' +
+          '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+            '<h3 class="font-bold text-slate-800 text-xs">Daftar Tagihan SPP (Invoices)</h3>' +
+            '<button onclick="navigate(\'finance\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+          '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
-              '<tr><th class="px-5 py-2.5">No. Invoice</th><th class="px-5 py-2.5">Tanggal & Jatuh Tempo</th><th class="px-5 py-2.5">Total Biaya</th><th class="px-5 py-2.5">Sisa Tagihan</th><th class="px-5 py-2.5">Status Bayar</th></tr>' +
+              '<tr>' +
+                '<th class="px-5 py-2.5">No. Invoice</th>' +
+                '<th class="px-5 py-2.5">Tanggal & Jatuh Tempo</th>' +
+                '<th class="px-5 py-2.5">Total Biaya</th>' +
+                '<th class="px-5 py-2.5">Sisa Tagihan</th>' +
+                '<th class="px-5 py-2.5">Status Bayar</th>' +
+                '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+              '</tr>' +
             '</thead>' +
             '<tbody class="divide-y divide-slate-100">';
 
-        invoices.forEach(function(inv) {
-          var isPaid = inv.paymentState === 'paid';
-          html += '<tr class="hover:bg-slate-50">' +
-            '<td class="px-5 py-3 font-bold font-mono text-slate-800">' + inv.name + '</td>' +
-            '<td class="px-5 py-3 text-slate-600">' + inv.date + ' (Due: ' + (inv.invoiceDueDate || '-') + ')</td>' +
-            '<td class="px-5 py-3 font-bold">Rp ' + (inv.amountTotal || 0).toLocaleString('id-ID') + '</td>' +
-            '<td class="px-5 py-3 text-slate-600">Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '</td>' +
-            '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' + (isPaid ? 'Lunas' : 'Belum Lunas') + '</span></td>' +
-          '</tr>';
-        });
+        if (invoices.length === 0) {
+          html += '<tr><td colspan="6" class="text-center py-8 text-slate-400">Belum ada data tagihan SPP.</td></tr>';
+        } else {
+          invoices.forEach(function(inv) {
+            var isPaid = inv.paymentState === 'paid';
+            var invJsonStr = JSON.stringify(inv).replace(/"/g, '&quot;');
+            html += '<tr class="hover:bg-slate-50">' +
+              '<td class="px-5 py-3 font-bold font-mono text-slate-800">' + inv.name + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + inv.date + ' (Due: ' + (inv.invoiceDueDate || '-') + ')</td>' +
+              '<td class="px-5 py-3 font-bold">Rp ' + (inv.amountTotal || 0).toLocaleString('id-ID') + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '</td>' +
+              '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' + (isPaid ? 'Lunas' : 'Belum Lunas') + '</span></td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick=\'viewInvoiceDetail(' + invJsonStr + ')\' class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Detail/Bayar</button>' +
+                (!isPaid ? '<button onclick="deleteInvoice(\'' + inv.id + '\', \'' + inv.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' : '') +
+              '</td>' +
+            '</tr>';
+          });
+        }
 
         html += '</tbody></table></div>';
         document.getElementById('main-content').innerHTML = html;
@@ -569,6 +588,8 @@ export const odooShellHtml = `<!DOCTYPE html>
         content.innerHTML = renderAcademicYearFormHtml({});
       } else if (state.currentView === 'inventory') {
         content.innerHTML = renderProductFormHtml({});
+      } else if (state.currentView === 'finance') {
+        content.innerHTML = renderInvoiceFormHtml({});
       } else {
         content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Item / Dokumen</label><input id="form-name" type="text" placeholder="Nama..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none"></div>';
       }
@@ -597,6 +618,41 @@ export const odooShellHtml = `<!DOCTYPE html>
       var content = document.getElementById('modal-form-content');
       content.innerHTML = renderProductFormHtml(product);
       document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function renderInvoiceFormHtml(inv) {
+      var defaultInvNumber = 'INV/' + new Date().getFullYear() + '/' + Math.floor(Math.random() * 9000 + 1000);
+      var today = new Date().toISOString().split('T')[0];
+      var nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nomor Invoice *</label>' +
+          '<input id="form-inv-number" type="text" value="' + (inv.name || defaultInvNumber) + '" placeholder="e.g. INV/2026/10/001" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none font-mono">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Invoice *</label>' +
+            '<input id="form-inv-date" type="date" value="' + (inv.date || today) + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Jatuh Tempo *</label>' +
+            '<input id="form-inv-due-date" type="date" value="' + (inv.invoiceDueDate || nextMonth) + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Siswa / Partner *</label>' +
+          '<input id="form-name" type="text" value="' + (inv.studentName || '') + '" placeholder="e.g. Andi Pratama / Siswa Kelas X" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nominal Biaya / Amount (Rp) *</label>' +
+          '<input id="form-inv-amount" type="number" value="' + (inv.amountTotal || 500000) + '" placeholder="500000" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Keterangan / Deskripsi</label>' +
+          '<textarea id="form-inv-desc" rows="2" placeholder="e.g. Iuran SPP Bulan November 2026" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' + (inv.description || 'Iuran SPP Siswa') + '</textarea>' +
+        '</div>' +
+      '</div>';
     }
 
     function renderProductFormHtml(p) {
@@ -877,6 +933,40 @@ export const odooShellHtml = `<!DOCTYPE html>
               throw new Error(errData.error || 'Gagal menambahkan produk');
             }
           }
+        } else if (state.currentView === 'finance') {
+          var invNumberInput = document.getElementById('form-inv-number');
+          var invDateInput = document.getElementById('form-inv-date');
+          var invDueDateInput = document.getElementById('form-inv-due-date');
+          var invAmountInput = document.getElementById('form-inv-amount');
+          var invDescInput = document.getElementById('form-inv-desc');
+
+          var invNumberVal = invNumberInput && invNumberInput.value.trim() ? invNumberInput.value.trim() : ('INV/' + new Date().getFullYear() + '/' + Math.floor(Math.random() * 9000 + 1000));
+          var invDateVal = invDateInput ? invDateInput.value : new Date().toISOString().split('T')[0];
+          var invDueDateVal = invDueDateInput ? invDueDateInput.value : null;
+          var invAmountVal = invAmountInput ? Number(invAmountInput.value) : 500000;
+          var invDescVal = invDescInput && invDescInput.value.trim() ? invDescInput.value.trim() : 'Tagihan SPP Siswa';
+
+          var invPayload = {
+            schoolId: 'school_sma_hb',
+            journalId: 'jrn_sale',
+            name: invNumberVal,
+            date: invDateVal,
+            dueDate: invDueDateVal,
+            amountTotal: invAmountVal,
+            description: invDescVal + ' - ' + nameVal,
+            receivableAccountId: 'coa_ar',
+            incomeAccountId: 'coa_rev_spp'
+          };
+
+          var createInvRes = await fetch('/api/finance/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(invPayload)
+          });
+          if (!createInvRes.ok) {
+            var errInvData = await createInvRes.json();
+            throw new Error(errInvData.error || 'Gagal membuat tagihan SPP');
+          }
         }
         closeCreateModal();
         navigate(state.currentView);
@@ -937,6 +1027,32 @@ export const odooShellHtml = `<!DOCTYPE html>
       } catch (err) {
         alert('Gagal menghapus produk: ' + err.message);
       }
+    }
+
+    async function deleteInvoice(invoiceId, invoiceName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus tagihan "' + invoiceName + '"? Ayat jurnal double-entry terkait akan dibatalkan/dihapus secara atomik dari D1.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/finance/invoices/' + invoiceId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus tagihan');
+        }
+        renderFinance();
+      } catch (err) {
+        alert('Gagal menghapus tagihan: ' + err.message);
+      }
+    }
+
+    function viewInvoiceDetail(inv) {
+      alert('Detail Tagihan ' + inv.name + ':\\n' +
+        'Status Bayar: ' + (inv.paymentState === 'paid' ? 'LUNAS' : 'BELUM LUNAS') + '\\n' +
+        'Total: Rp ' + (inv.amountTotal || 0).toLocaleString('id-ID') + '\\n' +
+        'Sisa: Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '\\n' +
+        'Jatuh Tempo: ' + (inv.invoiceDueDate || '-'));
     }
 
     function viewReportCard(studentId) {

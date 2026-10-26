@@ -14,6 +14,25 @@ financeRouter.get("/invoices", async (c) => {
   return c.json({ data: invoices });
 });
 
+financeRouter.get("/invoices/:id", async (c) => {
+  const id = c.req.param("id");
+  const invoice = await accountingEngine.getInvoiceById(c.env.DB, id);
+  if (!invoice) {
+    return c.json({ error: "Invoice not found" }, 404);
+  }
+  return c.json({ success: true, data: invoice });
+});
+
+financeRouter.delete("/invoices/:id", async (c) => {
+  const id = c.req.param("id");
+  try {
+    const result = await accountingEngine.deleteInvoice(c.env.DB, id);
+    return c.json({ success: true, data: result });
+  } catch (err: any) {
+    return c.json({ error: err.message || "Failed to delete invoice" }, 400);
+  }
+});
+
 financeRouter.post("/invoices", async (c) => {
   const body = await c.req.json();
   const move = await accountingEngine.createInvoice(c.env.DB, body);
