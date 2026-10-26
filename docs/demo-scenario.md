@@ -117,7 +117,37 @@ Semua akun demo menggunakan kata sandi default: `DemoPass123!`
 
 ---
 
-## 4. Checklist Kesiapan Sebelum Demo
+## 4. Perintah Seed & Reset Demo
+
+Tersedia skrip otomatis di [`package.json`](file:///D:/development/erp-school/package.json) untuk mengelola data demo kapan saja:
+
+### Lingkungan Lokal (Local D1 SQLite)
+- **Reset & Masukkan Ulang Data Demo (Clean Slate + Seed)**:
+  ```bash
+  npm run db:demo:reset
+  ```
+- **Hanya Masukkan Data Demo (Seed)**:
+  ```bash
+  npm run db:seed:local
+  ```
+- **Hanya Bersihkan Seluruh Data Demo (Reset)**:
+  ```bash
+  npm run db:reset:local
+  ```
+
+### Lingkungan Produksi / Remote Cloudflare D1
+- **Reset & Masukkan Ulang Data Demo Remote**:
+  ```bash
+  npm run db:demo:reset:remote
+  ```
+- **Hanya Masukkan Data Demo Remote**:
+  ```bash
+  npm run db:seed:remote
+  ```
+
+---
+
+## 5. Checklist Kesiapan Sebelum Demo
 
 - [x] Database lokal/remote Cloudflare D1 telah dieksekusi seeder terbaru (`src/db/seed.sql`).
 - [x] Jalankan verifikasi kode: `npm run typecheck` (0 error).

@@ -169,6 +169,67 @@ export const odooShellHtml = `<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Dedicated Payment Modal -->
+  <div id="payment-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="font-bold text-slate-800 text-base">Catat Pembayaran Tagihan</h3>
+        <button onclick="closePaymentModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-base"></i></button>
+      </div>
+      <input type="hidden" id="pay-move-id" value="">
+      <input type="hidden" id="pay-student-id" value="">
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nomor Tagihan / Invoice</label>
+          <input id="pay-invoice-number" type="text" readonly class="w-full text-xs p-2 bg-slate-100 border border-slate-200 rounded font-mono text-slate-700">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Jumlah Pembayaran (Rp) *</label>
+          <input id="pay-amount" type="number" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none font-bold">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Metode Pembayaran</label>
+            <select id="pay-method" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+              <option value="bank_transfer">Transfer Bank (BCA)</option>
+              <option value="cash">Kas Tunai (Kasir)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Tanggal Bayar</label>
+            <input id="pay-date" type="date" class="w-full text-xs p-2 border border-slate-300 rounded">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nomor Referensi / Bukti Transfer</label>
+          <input id="pay-reference" type="text" placeholder="e.g. TRF-BCA-20261027" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">
+        </div>
+      </div>
+      <div class="flex items-center justify-end space-x-2 mt-6 pt-4 border-t border-slate-100">
+        <button onclick="closePaymentModal()" class="px-3 py-1.5 border rounded text-xs font-medium text-slate-600 hover:bg-slate-50">Batal</button>
+        <button onclick="submitPayment()" class="px-3.5 py-1.5 bg-[#714B67] hover:bg-[#583950] text-white rounded text-xs font-semibold">Simpan Pembayaran</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Report Card Modal -->
+  <div id="report-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-800 text-base">Rapor Digital Akademik</h3>
+          <p class="text-xs text-slate-500 mt-0.5" id="report-modal-subtitle">Semester Ganjil 2025/2026</p>
+        </div>
+        <button onclick="closeReportModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-base"></i></button>
+      </div>
+      <div id="report-modal-body" class="space-y-4 text-xs">
+      </div>
+      <div class="flex items-center justify-end space-x-2 mt-6 pt-4 border-t border-slate-100">
+        <button onclick="closeReportModal()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium">Tutup</button>
+      </div>
+    </div>
+  </div>
+
   <!-- App Client-Side Controller -->
   <script>
     var state = {
@@ -481,19 +542,60 @@ export const odooShellHtml = `<!DOCTYPE html>
 
     async function renderAttendance() {
       try {
-        var res = await fetch('/api/attendance/timetables');
-        var json = await res.json();
+        var ttRes = await fetch('/api/attendance/timetables');
+        var sheetsRes = await fetch('/api/attendance/sheets');
+        var ttJson = await ttRes.json();
+        var sheetsJson = await sheetsRes.json();
+        var timetables = ttJson.data || [];
+        var sheets = sheetsJson.data || [];
 
-        var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-          '<div class="p-3.5 border-b border-slate-200"><h3 class="font-bold text-slate-800 text-xs">Jadwal Pelajaran Mingguan</h3></div>' +
-          '<div class="p-5">' +
-            '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">' +
-              '<div class="p-3.5 bg-slate-50 rounded border border-slate-200"><span class="font-semibold text-purple-800 uppercase block mb-1">Senin (07:30 - 09:00)</span><p class="font-bold text-slate-800">Matematika Wajib</p><p class="text-slate-500 mt-0.5">Kelas: X-MIPA-1 | Guru: Budi Santoso, S.Pd</p></div>' +
-              '<div class="p-3.5 bg-slate-50 rounded border border-slate-200"><span class="font-semibold text-purple-800 uppercase block mb-1">Selasa (09:15 - 10:45)</span><p class="font-bold text-slate-800">Fisika Dasar</p><p class="text-slate-500 mt-0.5">Kelas: X-MIPA-1 | Guru: Dewi Lestari, M.Si</p></div>' +
-              '<div class="p-3.5 bg-slate-50 rounded border border-slate-200"><span class="font-semibold text-purple-800 uppercase block mb-1">Rabu (07:30 - 09:00)</span><p class="font-bold text-slate-800">Kimia Analitik</p><p class="text-slate-500 mt-0.5">Kelas: X-MIPA-2 | Guru: Staf Pengajar</p></div>' +
+        var html = '<div class="space-y-6">' +
+          '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
+            '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+              '<h3 class="font-bold text-slate-800 text-xs">Sesi Presensi Kelas Real-Time</h3>' +
+              '<div class="space-x-2">' +
+                '<button onclick="openCreateAttendanceModal()" class="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded text-xs font-medium transition"><i class="fa-solid fa-plus text-[10px]"></i> + Buat Sesi Presensi Baru</button>' +
+                '<button onclick="navigate(\'attendance\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+              '</div>' +
             '</div>' +
-          '</div>' +
-        '</div>';
+            '<table class="w-full text-left text-xs text-slate-700">' +
+              '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
+                '<tr>' +
+                  '<th class="px-5 py-2.5">Tanggal</th>' +
+                  '<th class="px-5 py-2.5">Kelas / Rombel</th>' +
+                  '<th class="px-5 py-2.5">Pengajar / Guru</th>' +
+                  '<th class="px-5 py-2.5">Kehadiran (H / S / I / A)</th>' +
+                  '<th class="px-5 py-2.5">Status</th>' +
+                '</tr>' +
+              '</thead>' +
+              '<tbody class="divide-y divide-slate-100">';
+
+        if (sheets.length === 0) {
+          html += '<tr><td colspan="5" class="text-center py-6 text-slate-400">Belum ada sesi presensi tersimpan.</td></tr>';
+        } else {
+          sheets.forEach(function(sh) {
+            html += '<tr class="hover:bg-slate-50 transition">' +
+              '<td class="px-5 py-3 font-mono font-bold text-slate-800">' + sh.date + '</td>' +
+              '<td class="px-5 py-3 font-medium text-slate-800">' + (sh.classroomId || 'X-MIPA-1') + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + (sh.facultyId || 'Budi Santoso, S.Pd') + '</td>' +
+              '<td class="px-5 py-3"><span class="font-bold text-emerald-700">' + (sh.totalPresent || 0) + ' Hadir</span>, ' + (sh.totalSick || 0) + ' Sakit, ' + (sh.totalExcused || 0) + ' Izin, ' + (sh.totalAbsent || 0) + ' Alpa</td>' +
+              '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">' + sh.status + '</span></td>' +
+            '</tr>';
+          });
+        }
+
+        html += '</tbody></table></div>' +
+          '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
+            '<div class="p-3.5 border-b border-slate-200"><h3 class="font-bold text-slate-800 text-xs">Jadwal Pelajaran Mingguan</h3></div>' +
+            '<div class="p-5">' +
+              '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">' +
+                '<div class="p-3.5 bg-slate-50 rounded border border-slate-200"><span class="font-semibold text-purple-800 uppercase block mb-1">Senin (07:30 - 09:00)</span><p class="font-bold text-slate-800">Matematika Wajib</p><p class="text-slate-500 mt-0.5">Kelas: X-MIPA-1 | Guru: Budi Santoso, S.Pd</p></div>' +
+                '<div class="p-3.5 bg-slate-50 rounded border border-slate-200"><span class="font-semibold text-purple-800 uppercase block mb-1">Selasa (09:15 - 10:45)</span><p class="font-bold text-slate-800">Fisika Dasar</p><p class="text-slate-500 mt-0.5">Kelas: X-MIPA-1 | Guru: Dewi Lestari, M.Si</p></div>' +
+                '<div class="p-3.5 bg-slate-50 rounded border border-slate-200"><span class="font-semibold text-purple-800 uppercase block mb-1">Rabu (07:30 - 09:00)</span><p class="font-bold text-slate-800">Kimia Analitik</p><p class="text-slate-500 mt-0.5">Kelas: X-MIPA-2 | Guru: Staf Pengajar</p></div>' +
+              '</div>' +
+            '</div>' +
+          '</div></div>';
+
         document.getElementById('main-content').innerHTML = html;
       } catch (err) {
         document.getElementById('main-content').innerHTML = '<div class="p-6 bg-rose-50 text-rose-700 rounded">Error: ' + err.message + '</div>';
@@ -606,7 +708,8 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<td class="px-5 py-3 text-slate-600">Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '</td>' +
               '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' + (isPaid ? 'Lunas' : 'Belum Lunas') + '</span></td>' +
               '<td class="px-5 py-3 text-right space-x-1.5">' +
-                '<button onclick="viewInvoiceDetail(\'' + inv.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Detail/Bayar</button>' +
+                (!isPaid ? '<button onclick="openPaymentModal(\'' + inv.id + '\')" class="bg-[#714B67] hover:bg-[#583950] text-white px-2 py-1 rounded transition font-semibold">Catat Bayar</button>' : '') +
+                '<button onclick="viewInvoiceDetail(\'' + inv.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Detail</button>' +
                 (!isPaid ? '<button onclick="deleteInvoice(\'' + inv.id + '\', \'' + inv.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' : '') +
               '</td>' +
             '</tr>';
@@ -1031,7 +1134,33 @@ export const odooShellHtml = `<!DOCTYPE html>
       var editId = document.getElementById('edit-record-id').value;
 
       try {
-        if (state.currentView === 'students') {
+        var isAttendanceInput = document.getElementById('form-is-attendance');
+        if (isAttendanceInput && isAttendanceInput.value === 'true') {
+          var attDate = document.getElementById('form-att-date').value;
+          var attClass = document.getElementById('form-att-class').value;
+          var attAndi = document.getElementById('form-att-andi').value;
+          var attBella = document.getElementById('form-att-bella').value;
+
+          var attRes = await fetch('/api/attendance/sheets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              schoolId: 'school_sma_hb',
+              classroomId: attClass,
+              facultyId: 'fac_budi',
+              date: attDate,
+              status: 'confirmed',
+              lines: [
+                { studentId: 'std_andi', status: attAndi, remark: 'Presensi harian' },
+                { studentId: 'std_bella', status: attBella, remark: 'Presensi harian' }
+              ]
+            })
+          });
+          if (!attRes.ok) {
+            var errAtt = await attRes.json();
+            throw new Error(errAtt.error || 'Gagal menyimpan sesi presensi');
+          }
+        } else if (state.currentView === 'students') {
           var nisInput = document.getElementById('form-nis');
           var nisnInput = document.getElementById('form-nisn');
           var genderInput = document.getElementById('form-gender');
@@ -1420,8 +1549,167 @@ export const odooShellHtml = `<!DOCTYPE html>
         'Jatuh Tempo: ' + (inv.invoiceDueDate || '-'));
     }
 
-    function viewReportCard(studentId) {
-      alert('Membuka Rapor Digital Siswa ID: ' + studentId + ' (Terhubung dengan database D1)');
+    function openCreateAttendanceModal() {
+      document.getElementById('edit-record-id').value = '';
+      document.getElementById('modal-title').innerText = 'Buat Sesi Presensi Kelas';
+      var content = document.getElementById('modal-form-content');
+      var today = new Date().toISOString().split('T')[0];
+      content.innerHTML = '<div class="space-y-3">' +
+        '<input type="hidden" id="form-is-attendance" value="true">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Sesi / Catatan *</label>' +
+          '<input id="form-name" type="text" value="Presensi Matematika Wajib" placeholder="e.g. Sesi Presensi Pagi" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Presensi *</label>' +
+            '<input id="form-att-date" type="date" value="' + today + '" class="w-full text-xs p-2 border border-slate-300 rounded">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Kelas / Rombel</label>' +
+            '<select id="form-att-class" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">' +
+              '<option value="cls_x_ipa_1">X-MIPA-1</option>' +
+              '<option value="cls_x_ipa_2">X-MIPA-2</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<div class="p-3 bg-purple-50/50 rounded border border-purple-100">' +
+          '<span class="font-semibold text-slate-800 block mb-2">Checklist Kehadiran Siswa Kelas</span>' +
+          '<div class="space-y-2">' +
+            '<div class="flex items-center justify-between py-1 border-b border-purple-100/60">' +
+              '<span class="font-medium text-slate-800">Andi Pratama</span>' +
+              '<select id="form-att-andi" class="text-xs p-1 border border-slate-300 rounded bg-white">' +
+                '<option value="present">Hadir (Present)</option>' +
+                '<option value="sick">Sakit (Sick)</option>' +
+                '<option value="excused">Izin (Excused)</option>' +
+                '<option value="absent">Alpa (Absent)</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="flex items-center justify-between py-1">' +
+              '<span class="font-medium text-slate-800">Bella Cantika</span>' +
+              '<select id="form-att-bella" class="text-xs p-1 border border-slate-300 rounded bg-white">' +
+                '<option value="present">Hadir (Present)</option>' +
+                '<option value="sick">Sakit (Sick)</option>' +
+                '<option value="excused">Izin (Excused)</option>' +
+                '<option value="absent">Alpa (Absent)</option>' +
+              '</select>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openPaymentModal(invoiceId) {
+      var inv = (state.cache.invoices || []).find(function(x) { return x.id === invoiceId; });
+      if (!inv) return;
+      document.getElementById('pay-move-id').value = inv.id;
+      document.getElementById('pay-student-id').value = inv.studentId || '';
+      document.getElementById('pay-invoice-number').value = inv.name + ' (Sisa: Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + ')';
+      document.getElementById('pay-amount').value = inv.amountResidual || inv.amountTotal || 500000;
+      document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('pay-reference').value = 'TRF-BCA-' + Math.floor(Math.random() * 900000 + 100000);
+      document.getElementById('payment-modal').classList.remove('hidden');
+    }
+
+    function closePaymentModal() {
+      document.getElementById('payment-modal').classList.add('hidden');
+    }
+
+    async function submitPayment() {
+      var moveId = document.getElementById('pay-move-id').value;
+      var studentId = document.getElementById('pay-student-id').value;
+      var amount = Number(document.getElementById('pay-amount').value);
+      var method = document.getElementById('pay-method').value;
+      var paymentDate = document.getElementById('pay-date').value;
+      var ref = document.getElementById('pay-reference').value;
+
+      if (!amount || amount <= 0) {
+        alert('Nominal pembayaran harus lebih dari 0.');
+        return;
+      }
+
+      try {
+        var res = await fetch('/api/finance/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schoolId: 'school_sma_hb',
+            moveId: moveId,
+            studentId: studentId,
+            amount: amount,
+            paymentMethod: method,
+            paymentDate: paymentDate,
+            reference: ref
+          })
+        });
+
+        if (!res.ok) {
+          var err = await res.json();
+          throw new Error(err.error || 'Gagal menyimpan pembayaran');
+        }
+
+        closePaymentModal();
+        alert('Pembayaran berhasil dicatat! Status tagihan telah diperbarui secara otomatis.');
+        renderFinance();
+      } catch (e) {
+        alert('Gagal mencatat pembayaran: ' + e.message);
+      }
+    }
+
+    async function viewReportCard(studentId) {
+      var modal = document.getElementById('report-modal');
+      var body = document.getElementById('report-modal-body');
+      var subtitle = document.getElementById('report-modal-subtitle');
+      modal.classList.remove('hidden');
+      body.innerHTML = '<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-xl"></i><p class="mt-2 text-xs">Memuat rapor dari Cloudflare D1...</p></div>';
+
+      try {
+        var res = await fetch('/api/exams/report-card/' + studentId);
+        var json = await res.json();
+        var student = json.student || {};
+        var marks = json.marks || [];
+
+        subtitle.innerText = 'Siswa: ' + (student.name || studentId) + ' (NIS: ' + (student.nis || '-') + ') | Semester Ganjil 2025/2026';
+
+        var html = '<div class="grid grid-cols-3 gap-3 p-3 bg-purple-50 rounded border border-purple-100 text-xs">' +
+          '<div><span class="text-slate-500 block">Total Mata Pelajaran</span><span class="font-bold text-slate-800 text-sm">' + marks.length + ' Mapel</span></div>' +
+          '<div><span class="text-slate-500 block">Rata-rata Nilai</span><span class="font-bold text-emerald-700 text-sm">' + (json.averageScore || 0).toFixed(1) + '</span></div>' +
+          '<div><span class="text-slate-500 block">Status Hasil Belajar</span><span class="font-bold text-slate-800 text-sm">TUNTAS</span></div>' +
+        '</div>' +
+        '<table class="w-full text-left text-xs text-slate-700 border border-slate-200 rounded mt-3">' +
+          '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
+            '<tr>' +
+              '<th class="px-4 py-2.5">Mata Pelajaran</th>' +
+              '<th class="px-4 py-2.5">Nilai Angka</th>' +
+              '<th class="px-4 py-2.5">Predikat / Grade</th>' +
+              '<th class="px-4 py-2.5">Catatan Akademik</th>' +
+            '</tr>' +
+          '</thead>' +
+          '<tbody class="divide-y divide-slate-100">';
+
+        if (marks.length === 0) {
+          html += '<tr><td colspan="4" class="text-center py-6 text-slate-400">Belum ada rekap nilai ujian untuk siswa ini.</td></tr>';
+        } else {
+          marks.forEach(function(m) {
+            html += '<tr class="hover:bg-slate-50">' +
+              '<td class="px-4 py-2.5 font-bold text-slate-800">' + (m.subjectName || m.subjectCode || 'Mapel') + '</td>' +
+              '<td class="px-4 py-2.5 font-bold font-mono text-slate-800">' + m.marksObtained + '</td>' +
+              '<td class="px-4 py-2.5"><span class="px-2 py-0.5 rounded text-[11px] font-bold ' + (m.grade === 'A' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800') + '">' + m.grade + '</span></td>' +
+              '<td class="px-4 py-2.5 text-slate-600">' + (m.remark || '-') + '</td>' +
+            '</tr>';
+          });
+        }
+
+        html += '</tbody></table>';
+        body.innerHTML = html;
+      } catch (err) {
+        body.innerHTML = '<div class="p-4 bg-rose-50 text-rose-700 rounded">Gagal memuat rapor: ' + err.message + '</div>';
+      }
+    }
+
+    function closeReportModal() {
+      document.getElementById('report-modal').classList.add('hidden');
     }
 
     window.onload = init;

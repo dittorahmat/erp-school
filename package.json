@@ -13,8 +13,12 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 execute erp-school-db --local",
     "db:seed:local": "wrangler d1 execute erp-school-db --local --file=./src/db/seed.sql",
+    "db:reset:local": "wrangler d1 execute erp-school-db --local --file=./src/db/reset.sql",
+    "db:demo:reset": "npm run db:reset:local && npm run db:seed:local",
     "db:migrate:remote": "wrangler d1 execute erp-school-db --remote",
     "db:seed:remote": "wrangler d1 execute erp-school-db --remote --file=./src/db/seed.sql -y",
+    "db:reset:remote": "wrangler d1 execute erp-school-db --remote --file=./src/db/reset.sql -y",
+    "db:demo:reset:remote": "npm run db:reset:remote && npm run db:seed:remote",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev"
   },
