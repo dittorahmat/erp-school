@@ -124,3 +124,79 @@ export const subjects = sqliteTable('subjects', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
+
+// --------------------------------------------------------------------------
+// Faculty & Classrooms
+// --------------------------------------------------------------------------
+export const faculties = sqliteTable('faculties', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  userId: text('user_id').references(() => user.id),
+  nip: text('nip').notNull().unique(),
+  name: text('name').notNull(),
+  gender: text('gender').notNull(), // male, female
+  phone: text('phone'),
+  email: text('email'),
+  avatarUrl: text('avatar_url'),
+  department: text('department').default('Akademik'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const classrooms = sqliteTable('classrooms', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  academicYearId: text('academic_year_id').notNull().references(() => academicYears.id),
+  gradeLevelId: text('grade_level_id').notNull().references(() => gradeLevels.id),
+  homeroomTeacherId: text('homeroom_teacher_id').references(() => faculties.id),
+  name: text('name').notNull(), // e.g. "X-IPA-1"
+  code: text('code').notNull(),
+  capacity: integer('capacity').default(35),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+// --------------------------------------------------------------------------
+// Students & Guardians
+// --------------------------------------------------------------------------
+export const guardians = sqliteTable('guardians', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => user.id),
+  name: text('name').notNull(),
+  relation: text('relation').notNull().default('parent'), // father, mother, guardian
+  phone: text('phone').notNull(),
+  email: text('email'),
+  occupation: text('occupation'),
+  address: text('address'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const students = sqliteTable('students', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  userId: text('user_id').references(() => user.id),
+  guardianId: text('guardian_id').references(() => guardians.id),
+  nis: text('nis').notNull().unique(),
+  nisn: text('nisn').notNull().unique(),
+  name: text('name').notNull(),
+  gender: text('gender').notNull(), // male, female
+  birthDate: text('birth_date'),
+  birthPlace: text('birth_place'),
+  address: text('address'),
+  avatarUrl: text('avatar_url'), // File stored in Cloudflare R2
+  documentUrl: text('document_url'), // File stored in Cloudflare R2
+  status: text('status').notNull().default('active'), // active, alumni, transferred
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const enrollments = sqliteTable('enrollments', {
+  id: text('id').primaryKey(),
+  studentId: text('student_id').notNull().references(() => students.id),
+  classroomId: text('classroom_id').notNull().references(() => classrooms.id),
+  academicYearId: text('academic_year_id').notNull().references(() => academicYears.id),
+  rollNumber: text('roll_number'),
+  status: text('status').notNull().default('active'), // active, completed, dropped
+  enrolledAt: integer('enrolled_at', { mode: 'timestamp' }).notNull()
+});
