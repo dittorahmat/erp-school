@@ -1,8 +1,8 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { desc } from "drizzle-orm";
-import { generateId } from "../lib/utils";
+import { desc, eq } from "drizzle-orm";
+import { compactDefined, generateId } from "../lib/utils";
 
 export interface StockMoveInput {
   productId: string;
@@ -21,6 +21,20 @@ export interface ExecuteStockTransferParams {
   moves?: StockMoveInput[];
 }
 
+export interface ProductInput {
+  id?: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  type?: "storable" | "consumable" | "service";
+  uom?: string;
+  listPrice?: number;
+  standardPrice?: number;
+  serialNumber?: string | null;
+}
+
+export type UpdateProductInput = Partial<Omit<ProductInput, "id">>;
+
 /**
  * Deep Stock Transfer Module.
  * Encapsulates double-entry physical inventory moves and atomic batch persistence.
@@ -31,7 +45,13 @@ export const stockTransfer = {
     return db.select().from(schema.products).orderBy(schema.products.name);
   },
 
-  async createProduct(d1: D1Database, body: any) {
+  async getProductById(d1: D1Database, id: string) {
+    const db = drizzle(d1, { schema });
+    const results = await db.select().from(schema.products).where(eq(schema.products.id, id)).limit(1);
+    return results[0] || null;
+  },
+
+  async createProduct(d1: D1Database, body: ProductInput) {
     const db = drizzle(d1, { schema });
     const newProduct = {
       id: body.id || generateId("prod"),
@@ -40,14 +60,40 @@ export const stockTransfer = {
       code: body.code,
       type: body.type || "storable",
       uom: body.uom || "pcs",
-      listPrice: body.listPrice || 0,
-      standardPrice: body.standardPrice || 0,
+      listPrice: body.listPrice !== undefined ? Number(body.listPrice) : 0,
+      standardPrice: body.standardPrice !== undefined ? Number(body.standardPrice) : 0,
       serialNumber: body.serialNumber || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     await db.insert(schema.products).values(newProduct);
     return newProduct;
+  },
+
+  async updateProduct(d1: D1Database, id: string, data: UpdateProductInput) {
+    const db = drizzle(d1, { schema });
+    const updateData = {
+      ...compactDefined({
+        name: data.name,
+        code: data.code,
+        type: data.type,
+        uom: data.uom,
+        listPrice: data.listPrice !== undefined ? Number(data.listPrice) : undefined,
+        standardPrice: data.standardPrice !== undefined ? Number(data.standardPrice) : undefined,
+        serialNumber: data.serialNumber,
+        schoolId: data.schoolId,
+      }),
+      updatedAt: new Date(),
+    };
+
+    await db.update(schema.products).set(updateData).where(eq(schema.products.id, id));
+    return this.getProductById(d1, id);
+  },
+
+  async deleteProduct(d1: D1Database, id: string) {
+    const db = drizzle(d1, { schema });
+    await db.delete(schema.products).where(eq(schema.products.id, id));
+    return { success: true, id };
   },
 
   async getPickings(d1: D1Database) {

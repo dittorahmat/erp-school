@@ -9,6 +9,7 @@ export interface CreateInvoiceParams {
   schoolId?: string;
   journalId?: string;
   studentId?: string;
+  partnerId?: string | null;
   name?: string;
   date?: string;
   dueDate?: string | null;
@@ -61,12 +62,13 @@ export const accountingEngine = {
     const db = drizzle(d1, { schema });
     const moveId = params.id || generateId("inv");
     const amount = Number(params.amountTotal || 500000);
+    const studentId = params.studentId || params.partnerId || null;
 
     const move = {
       id: moveId,
       schoolId: params.schoolId || "school_sma_hb",
       journalId: params.journalId || "jrn_sale",
-      studentId: params.studentId,
+      studentId: studentId,
       name: params.name || `INV/${new Date().getFullYear()}/${Date.now().toString().slice(-4)}`,
       date: params.date || new Date().toISOString().split("T")[0],
       moveType: "out_invoice",
@@ -83,7 +85,7 @@ export const accountingEngine = {
       id: generateId("aml_deb"),
       moveId,
       accountId: params.receivableAccountId || "coa_ar",
-      studentId: params.studentId,
+      studentId: studentId,
       name: params.description || "Tagihan SPP Siswa",
       debit: amount,
       credit: 0,
@@ -95,7 +97,7 @@ export const accountingEngine = {
       id: generateId("aml_crd"),
       moveId,
       accountId: params.incomeAccountId || "coa_rev_spp",
-      studentId: params.studentId,
+      studentId: studentId,
       name: params.description || "Pendapatan SPP",
       debit: 0,
       credit: amount,
@@ -208,6 +210,35 @@ export const accountingEngine = {
     await db.batch(stmts as any);
 
     return payment;
+  },
+
+  async getInvoiceById(d1: D1Database, id: string) {
+    const db = drizzle(d1, { schema });
+    const results = await db
+      .select()
+      .from(schema.accountMoves)
+      .where(eq(schema.accountMoves.id, id))
+      .limit(1);
+    return results[0] || null;
+  },
+
+  async deleteInvoice(d1: D1Database, id: string) {
+    const db = drizzle(d1, { schema });
+    const invoice = await this.getInvoiceById(d1, id);
+    if (!invoice) {
+      throw new Error("Invoice tidak ditemukan");
+    }
+    if (invoice.paymentState === "paid") {
+      throw new Error("Invoice yang sudah lunas tidak dapat dihapus");
+    }
+
+    // Atomic batch delete for move lines and the move header
+    await db.batch([
+      db.delete(schema.accountMoveLines).where(eq(schema.accountMoveLines.moveId, id)),
+      db.delete(schema.accountMoves).where(eq(schema.accountMoves.id, id)),
+    ]);
+
+    return { success: true, id };
   },
 
   async getTrialBalance(d1: D1Database) {

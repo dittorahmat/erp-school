@@ -141,3 +141,34 @@ VALUES
   ('sm_001', 'pick_rec_001', 'prd_seragam', 'loc_supplier', 'loc_internal', 100, 'done', 1761476400),
   ('sm_002', 'pick_rec_001', 'prd_buku_mat', 'loc_supplier', 'loc_internal', 80, 'done', 1761476400),
   ('sm_003', 'pick_rec_001', 'prd_laptop', 'loc_supplier', 'loc_internal', 25, 'done', 1761476400);
+
+-- 14. Timetables (Jadwal Pelajaran)
+INSERT OR REPLACE INTO timetables (id, school_id, classroom_id, subject_id, faculty_id, day_of_week, start_time, end_time, created_at, updated_at)
+VALUES 
+  ('tt_mon_mat', 'school_sma_hb', 'cls_x_ipa_1', 'sbj_mat', 'fac_budi', 'monday', '07:30', '09:00', 1761476400, 1761476400),
+  ('tt_mon_fis', 'school_sma_hb', 'cls_x_ipa_1', 'sbj_fis', 'fac_dewi', 'monday', '09:30', '11:00', 1761476400, 1761476400),
+  ('tt_tue_eng', 'school_sma_hb', 'cls_x_ipa_1', 'sbj_eng', 'fac_budi', 'tuesday', '08:00', '09:30', 1761476400, 1761476400),
+  ('tt_wed_mat', 'school_sma_hb', 'cls_x_ipa_2', 'sbj_mat', 'fac_budi', 'wednesday', '07:30', '09:00', 1761476400, 1761476400);
+
+-- 15. Attendance Sheets & Lines (Presensi Siswa)
+INSERT OR REPLACE INTO attendance_sheets (id, school_id, classroom_id, faculty_id, timetable_id, date, status, total_present, total_absent, total_sick, total_excused, created_at, updated_at)
+VALUES 
+  ('att_20261026_01', 'school_sma_hb', 'cls_x_ipa_1', 'fac_budi', 'tt_mon_mat', '2026-10-26', 'confirmed', 2, 0, 0, 0, 1761476400, 1761476400);
+
+INSERT OR REPLACE INTO attendance_lines (id, sheet_id, student_id, status, remark, created_at)
+VALUES 
+  ('attl_andi_01', 'att_20261026_01', 'std_andi', 'present', 'Hadir tepat waktu', 1761476400),
+  ('attl_bella_01', 'att_20261026_01', 'std_bella', 'present', 'Hadir tepat waktu', 1761476400);
+
+-- 16. Exam Sessions & Grade Marks (Penilaian & Rapor)
+INSERT OR REPLACE INTO exam_sessions (id, school_id, academic_year_id, term_id, classroom_id, subject_id, name, exam_date, total_marks, passing_marks, weightage, status, created_at, updated_at)
+VALUES 
+  ('exam_uts_mat', 'school_sma_hb', 'ay_2025_2026', 'term_sem1', 'cls_x_ipa_1', 'sbj_mat', 'UTS Semester Ganjil Matematika Wajib', '2026-10-15', 100, 75, 30, 'published', 1761476400, 1761476400),
+  ('exam_uts_fis', 'school_sma_hb', 'ay_2025_2026', 'term_sem1', 'cls_x_ipa_1', 'sbj_fis', 'UTS Semester Ganjil Fisika Dasar', '2026-10-16', 100, 75, 30, 'published', 1761476400, 1761476400);
+
+INSERT OR REPLACE INTO exam_marks (id, session_id, student_id, marks_obtained, grade, remark, created_at, updated_at)
+VALUES 
+  ('mark_andi_mat', 'exam_uts_mat', 'std_andi', 92, 'A', 'Sangat memuaskan dalam aljabar', 1761476400, 1761476400),
+  ('mark_andi_fis', 'exam_uts_fis', 'std_andi', 86, 'B', 'Memahami konsep kinematika dengan baik', 1761476400, 1761476400),
+  ('mark_bella_mat', 'exam_uts_mat', 'std_bella', 88, 'B', 'Pemecahan masalah sistematis', 1761476400, 1761476400),
+  ('mark_bella_fis', 'exam_uts_fis', 'std_bella', 94, 'A', 'Sangat teliti dalam praktikum dan teori', 1761476400, 1761476400);

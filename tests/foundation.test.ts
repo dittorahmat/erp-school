@@ -14,7 +14,8 @@ describe("Foundation Tracer Bullet - Cloudflare Monolith", () => {
     const res = await app.request("/");
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain("ERP Sekolah - Odoo Edition");
+    expect(html).toContain("ERP Sekolah");
+    expect(html).not.toContain("Odoo Edition");
     expect(html).toContain("Odoo Control Panel");
     expect(html).toContain("SMA Harapan Bangsa");
   });

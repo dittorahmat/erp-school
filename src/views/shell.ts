@@ -3,7 +3,7 @@ export const odooShellHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ERP Sekolah - Odoo Edition</title>
+  <title>ERP Sekolah</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -152,13 +152,14 @@ export const odooShellHtml = `<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Create Record Modal -->
+  <!-- Create / Edit Record Modal -->
   <div id="create-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
         <h3 class="font-bold text-slate-800 text-base" id="modal-title">Tambah Data</h3>
         <button onclick="closeCreateModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-base"></i></button>
       </div>
+      <input type="hidden" id="edit-record-id" value="">
       <div id="modal-form-content" class="space-y-4 text-xs">
       </div>
       <div class="flex items-center justify-end space-x-2 mt-6 pt-4 border-t border-slate-100">
@@ -177,7 +178,15 @@ export const odooShellHtml = `<!DOCTYPE html>
         email: 'admin@sekolah.demo',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
       })),
-      currentView: 'dashboard'
+      currentView: 'dashboard',
+      cache: {
+        students: [],
+        academicYears: [],
+        subjects: [],
+        exams: [],
+        invoices: [],
+        inventory: []
+      }
     };
 
     var demoUsers = {
@@ -332,6 +341,7 @@ export const odooShellHtml = `<!DOCTYPE html>
         var res = await fetch('/api/students');
         var json = await res.json();
         var data = json.data || [];
+        state.cache.students = data;
 
         var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
           '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
@@ -362,7 +372,11 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<td class="px-5 py-3 font-mono">' + s.nis + ' / ' + s.nisn + '</td>' +
               '<td class="px-5 py-3 capitalize">' + s.gender + '</td>' +
               '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">' + s.status + '</span></td>' +
-              '<td class="px-5 py-3 text-right"><button onclick="viewReportCard(\\'' + s.id + '\\')" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1 rounded transition font-medium">Lihat Rapor</button></td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick="viewReportCard(\\\'' + s.id + '\\\')" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1 rounded transition font-medium">Rapor</button>' +
+                '<button onclick="openEditStudentModal(\\\'' + s.id + '\\\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteStudent(\\\'' + s.id + '\\\', \\\'' + s.name.replace(/'/g, "\\\\\\'") + '\\\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
             '</tr>';
           });
         }
@@ -376,28 +390,89 @@ export const odooShellHtml = `<!DOCTYPE html>
 
     async function renderAcademics() {
       try {
-        var res = await fetch('/api/academic/years');
-        var json = await res.json();
-        var years = json.data || [];
+        var yearsRes = await fetch('/api/academic/years');
+        var subjectsRes = await fetch('/api/academic/subjects');
+        var yearsJson = await yearsRes.json();
+        var subjectsJson = await subjectsRes.json();
+        var years = yearsJson.data || [];
+        var subjects = subjectsJson.data || [];
+        state.cache.academicYears = years;
+        state.cache.subjects = subjects;
 
-        var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-          '<div class="p-3.5 border-b border-slate-200"><span class="font-semibold text-xs text-slate-700">Tahun Ajaran Aktif</span></div>' +
-          '<table class="w-full text-left text-xs text-slate-700">' +
-            '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
-              '<tr><th class="px-5 py-2.5">Nama Tahun Ajaran</th><th class="px-5 py-2.5">Kode</th><th class="px-5 py-2.5">Periode</th><th class="px-5 py-2.5">Status</th></tr>' +
-            '</thead>' +
-            '<tbody class="divide-y divide-slate-100">';
+        var html = '<div class="space-y-6">' +
+          '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
+            '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+              '<span class="font-semibold text-xs text-slate-700">Tahun Ajaran Aktif</span>' +
+              '<div class="space-x-2">' +
+                '<button onclick="openCreateAcademicYearModal()" class="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded text-xs font-medium transition"><i class="fa-solid fa-plus text-[10px]"></i> + Tahun Ajaran</button>' +
+                '<button onclick="navigate(\'academics\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+              '</div>' +
+            '</div>' +
+            '<table class="w-full text-left text-xs text-slate-700">' +
+              '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
+                '<tr>' +
+                  '<th class="px-5 py-2.5">Nama Tahun Ajaran</th>' +
+                  '<th class="px-5 py-2.5">Kode</th>' +
+                  '<th class="px-5 py-2.5">Periode</th>' +
+                  '<th class="px-5 py-2.5">Status</th>' +
+                  '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+                '</tr>' +
+              '</thead>' +
+              '<tbody class="divide-y divide-slate-100">';
 
-        years.forEach(function(y) {
-          html += '<tr class="hover:bg-slate-50">' +
-            '<td class="px-5 py-3 font-bold text-slate-800">' + y.name + '</td>' +
-            '<td class="px-5 py-3 font-mono">' + y.code + '</td>' +
-            '<td class="px-5 py-3 text-slate-600">' + y.startDate + ' s/d ' + y.endDate + '</td>' +
-            '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">' + y.status + '</span></td>' +
-          '</tr>';
-        });
+        if (years.length === 0) {
+          html += '<tr><td colspan="5" class="text-center py-8 text-slate-400">Belum ada data tahun ajaran.</td></tr>';
+        } else {
+          years.forEach(function(y) {
+            html += '<tr class="hover:bg-slate-50 transition">' +
+              '<td class="px-5 py-3 font-bold text-slate-800">' + y.name + '</td>' +
+              '<td class="px-5 py-3 font-mono">' + y.code + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + (y.startDate || '-') + ' s/d ' + (y.endDate || '-') + '</td>' +
+              '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (y.status === 'active' ? 'bg-emerald-100 text-emerald-800' : (y.status === 'closed' ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800')) + '">' + y.status + '</span></td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick="openEditAcademicYearModal(\'' + y.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteAcademicYear(\'' + y.id + '\', \'' + y.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
+            '</tr>';
+          });
+        }
 
-        html += '</tbody></table></div>';
+        html += '</tbody></table></div>' +
+          '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
+            '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+              '<span class="font-semibold text-xs text-slate-700">Daftar Mata Pelajaran (Kurikulum)</span>' +
+              '<button onclick="openCreateSubjectModal()" class="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded text-xs font-medium transition"><i class="fa-solid fa-plus text-[10px]"></i> + Tambah Mapel</button>' +
+            '</div>' +
+            '<table class="w-full text-left text-xs text-slate-700">' +
+              '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
+                '<tr>' +
+                  '<th class="px-5 py-2.5">Nama Mata Pelajaran</th>' +
+                  '<th class="px-5 py-2.5">Kode</th>' +
+                  '<th class="px-5 py-2.5">Tipe</th>' +
+                  '<th class="px-5 py-2.5">Bobot</th>' +
+                  '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+                '</tr>' +
+              '</thead>' +
+              '<tbody class="divide-y divide-slate-100">';
+
+        if (subjects.length === 0) {
+          html += '<tr><td colspan="5" class="text-center py-8 text-slate-400">Belum ada data mata pelajaran.</td></tr>';
+        } else {
+          subjects.forEach(function(sub) {
+            html += '<tr class="hover:bg-slate-50 transition">' +
+              '<td class="px-5 py-3 font-bold text-slate-800">' + sub.name + '</td>' +
+              '<td class="px-5 py-3 font-mono">' + sub.code + '</td>' +
+              '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (sub.type === 'compulsory' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800') + '">' + (sub.type || 'compulsory') + '</span></td>' +
+              '<td class="px-5 py-3 text-slate-600">' + (sub.weightage || 100) + '</td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick="openEditSubjectModal(\'' + sub.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteSubject(\'' + sub.id + '\', \'' + sub.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
+            '</tr>';
+          });
+        }
+
+        html += '</tbody></table></div></div>';
         document.getElementById('main-content').innerHTML = html;
       } catch (err) {
         document.getElementById('main-content').innerHTML = '<div class="p-6 bg-rose-50 text-rose-700 rounded">Gagal memuat data akademik: ' + err.message + '</div>';
@@ -426,19 +501,62 @@ export const odooShellHtml = `<!DOCTYPE html>
     }
 
     async function renderExams() {
-      var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-        '<div class="p-3.5 border-b border-slate-200"><h3 class="font-bold text-slate-800 text-xs">Sesi Ujian Semester Ganjil 2025/2026</h3></div>' +
-        '<table class="w-full text-left text-xs text-slate-700">' +
-          '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
-            '<tr><th class="px-5 py-2.5">Nama Ujian</th><th class="px-5 py-2.5">Mata Pelajaran</th><th class="px-5 py-2.5">Tanggal Ujian</th><th class="px-5 py-2.5">Passing Marks (KKM)</th><th class="px-5 py-2.5">Status</th></tr>' +
-          '</thead>' +
-          '<tbody class="divide-y divide-slate-100">' +
-            '<tr class="hover:bg-slate-50"><td class="px-5 py-3 font-bold text-slate-800">UTS Semester Ganjil</td><td class="px-5 py-3">Matematika Wajib (MAT-10)</td><td class="px-5 py-3 text-slate-600">2026-10-15</td><td class="px-5 py-3 font-bold">75</td><td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">Published</span></td></tr>' +
-            '<tr class="hover:bg-slate-50"><td class="px-5 py-3 font-bold text-slate-800">Tugas Praktikum 1</td><td class="px-5 py-3">Fisika Dasar (FIS-10)</td><td class="px-5 py-3 text-slate-600">2026-10-20</td><td class="px-5 py-3 font-bold">75</td><td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">Published</span></td></tr>' +
-          '</tbody>' +
-        '</table>' +
-      '</div>';
-      document.getElementById('main-content').innerHTML = html;
+      try {
+        var res = await fetch('/api/exams/sessions');
+        var json = await res.json();
+        var data = json.data || [];
+        state.cache.exams = data;
+
+        var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
+          '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+            '<h3 class="font-bold text-slate-800 text-xs">Sesi Ujian Semester Ganjil 2025/2026</h3>' +
+            '<button onclick="navigate(\'exams\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+          '</div>' +
+          '<table class="w-full text-left text-xs text-slate-700">' +
+            '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
+              '<tr>' +
+                '<th class="px-5 py-2.5">Nama Ujian</th>' +
+                '<th class="px-5 py-2.5">Mata Pelajaran</th>' +
+                '<th class="px-5 py-2.5">Tanggal Ujian</th>' +
+                '<th class="px-5 py-2.5">Passing Marks (KKM)</th>' +
+                '<th class="px-5 py-2.5">Bobot</th>' +
+                '<th class="px-5 py-2.5">Status</th>' +
+                '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody class="divide-y divide-slate-100">';
+
+        if (data.length === 0) {
+          html += '<tr><td colspan="7" class="text-center py-8 text-slate-400">Belum ada sesi ujian. Klik tombol Buat Data untuk menambahkan.</td></tr>';
+        } else {
+          data.forEach(function(exam) {
+            var isPublished = exam.status === 'published';
+            var statusBadge = isPublished
+              ? '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">Published</span>'
+              : (exam.status === 'closed'
+                ? '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">Closed</span>'
+                : '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800">Draft</span>');
+
+            html += '<tr class="hover:bg-slate-50 transition">' +
+              '<td class="px-5 py-3 font-bold text-slate-800">' + exam.name + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + (exam.subjectId || 'Umum') + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + (exam.examDate || '-') + '</td>' +
+              '<td class="px-5 py-3 font-bold">' + (exam.passingMarks || 75) + '</td>' +
+              '<td class="px-5 py-3">' + (exam.weightage || 30) + '%</td>' +
+              '<td class="px-5 py-3">' + statusBadge + '</td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick="openEditExamModal(\'' + exam.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteExamSession(\'' + exam.id + '\', \'' + exam.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
+            '</tr>';
+          });
+        }
+
+        html += '</tbody></table></div>';
+        document.getElementById('main-content').innerHTML = html;
+      } catch (err) {
+        document.getElementById('main-content').innerHTML = '<div class="p-6 bg-rose-50 text-rose-700 rounded">Error: ' + err.message + '</div>';
+      }
     }
 
     async function renderFinance() {
@@ -448,6 +566,7 @@ export const odooShellHtml = `<!DOCTYPE html>
         var invJson = await invRes.json();
         var tbJson = await tbRes.json();
         var invoices = invJson.data || [];
+        state.cache.invoices = invoices;
 
         var html = '<div class="bg-slate-800 text-white p-5 rounded border border-slate-700 mb-6 flex items-center justify-between">' +
           '<div>' +
@@ -458,23 +577,41 @@ export const odooShellHtml = `<!DOCTYPE html>
           '<div class="text-right"><span class="text-xs bg-slate-700 px-3 py-1 rounded font-mono">' + (tbJson.lineCount || 0) + ' Journal Lines</span></div>' +
         '</div>' +
         '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-          '<div class="p-3.5 border-b border-slate-200"><h3 class="font-bold text-slate-800 text-xs">Daftar Tagihan SPP (Invoices)</h3></div>' +
+          '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+            '<h3 class="font-bold text-slate-800 text-xs">Daftar Tagihan SPP (Invoices)</h3>' +
+            '<button onclick="navigate(\'finance\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+          '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
-              '<tr><th class="px-5 py-2.5">No. Invoice</th><th class="px-5 py-2.5">Tanggal & Jatuh Tempo</th><th class="px-5 py-2.5">Total Biaya</th><th class="px-5 py-2.5">Sisa Tagihan</th><th class="px-5 py-2.5">Status Bayar</th></tr>' +
+              '<tr>' +
+                '<th class="px-5 py-2.5">No. Invoice</th>' +
+                '<th class="px-5 py-2.5">Tanggal & Jatuh Tempo</th>' +
+                '<th class="px-5 py-2.5">Total Biaya</th>' +
+                '<th class="px-5 py-2.5">Sisa Tagihan</th>' +
+                '<th class="px-5 py-2.5">Status Bayar</th>' +
+                '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+              '</tr>' +
             '</thead>' +
             '<tbody class="divide-y divide-slate-100">';
 
-        invoices.forEach(function(inv) {
-          var isPaid = inv.paymentState === 'paid';
-          html += '<tr class="hover:bg-slate-50">' +
-            '<td class="px-5 py-3 font-bold font-mono text-slate-800">' + inv.name + '</td>' +
-            '<td class="px-5 py-3 text-slate-600">' + inv.date + ' (Due: ' + (inv.invoiceDueDate || '-') + ')</td>' +
-            '<td class="px-5 py-3 font-bold">Rp ' + (inv.amountTotal || 0).toLocaleString('id-ID') + '</td>' +
-            '<td class="px-5 py-3 text-slate-600">Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '</td>' +
-            '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' + (isPaid ? 'Lunas' : 'Belum Lunas') + '</span></td>' +
-          '</tr>';
-        });
+        if (invoices.length === 0) {
+          html += '<tr><td colspan="6" class="text-center py-8 text-slate-400">Belum ada data tagihan SPP.</td></tr>';
+        } else {
+          invoices.forEach(function(inv) {
+            var isPaid = inv.paymentState === 'paid';
+            html += '<tr class="hover:bg-slate-50">' +
+              '<td class="px-5 py-3 font-bold font-mono text-slate-800">' + inv.name + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + inv.date + ' (Due: ' + (inv.invoiceDueDate || '-') + ')</td>' +
+              '<td class="px-5 py-3 font-bold">Rp ' + (inv.amountTotal || 0).toLocaleString('id-ID') + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '</td>' +
+              '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' + (isPaid ? 'Lunas' : 'Belum Lunas') + '</span></td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick="viewInvoiceDetail(\'' + inv.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Detail/Bayar</button>' +
+                (!isPaid ? '<button onclick="deleteInvoice(\'' + inv.id + '\', \'' + inv.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' : '') +
+              '</td>' +
+            '</tr>';
+          });
+        }
 
         html += '</tbody></table></div>';
         document.getElementById('main-content').innerHTML = html;
@@ -488,25 +625,45 @@ export const odooShellHtml = `<!DOCTYPE html>
         var res = await fetch('/api/inventory/products');
         var json = await res.json();
         var data = json.data || [];
+        state.cache.inventory = data;
 
         var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-          '<div class="p-3.5 border-b border-slate-200"><h3 class="font-bold text-slate-800 text-xs">Daftar Barang & Aset Sekolah</h3></div>' +
+          '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+            '<h3 class="font-bold text-slate-800 text-xs">Daftar Barang & Aset Sekolah</h3>' +
+            '<button onclick="navigate(\'inventory\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+          '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
-              '<tr><th class="px-5 py-2.5">Nama Produk / Item</th><th class="px-5 py-2.5">Kode</th><th class="px-5 py-2.5">Tipe</th><th class="px-5 py-2.5">Satuan</th><th class="px-5 py-2.5">Harga Standar</th><th class="px-5 py-2.5">Nomor Seri Aset</th></tr>' +
+              '<tr>' +
+                '<th class="px-5 py-2.5">Nama Produk / Item</th>' +
+                '<th class="px-5 py-2.5">Kode</th>' +
+                '<th class="px-5 py-2.5">Tipe</th>' +
+                '<th class="px-5 py-2.5">Satuan</th>' +
+                '<th class="px-5 py-2.5">Harga Standar</th>' +
+                '<th class="px-5 py-2.5">Nomor Seri Aset</th>' +
+                '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+              '</tr>' +
             '</thead>' +
             '<tbody class="divide-y divide-slate-100">';
 
-        data.forEach(function(p) {
-          html += '<tr class="hover:bg-slate-50">' +
-            '<td class="px-5 py-3 font-bold text-slate-800">' + p.name + '</td>' +
-            '<td class="px-5 py-3 font-mono">' + p.code + '</td>' +
-            '<td class="px-5 py-3 uppercase">' + p.type + '</td>' +
-            '<td class="px-5 py-3">' + p.uom + '</td>' +
-            '<td class="px-5 py-3">Rp ' + (p.standardPrice || 0).toLocaleString('id-ID') + '</td>' +
-            '<td class="px-5 py-3 font-mono text-slate-500">' + (p.serialNumber || '-') + '</td>' +
-          '</tr>';
-        });
+        if (data.length === 0) {
+          html += '<tr><td colspan="7" class="text-center py-8 text-slate-400">Belum ada data barang / aset.</td></tr>';
+        } else {
+          data.forEach(function(p) {
+            html += '<tr class="hover:bg-slate-50 transition">' +
+              '<td class="px-5 py-3 font-bold text-slate-800">' + p.name + '</td>' +
+              '<td class="px-5 py-3 font-mono">' + p.code + '</td>' +
+              '<td class="px-5 py-3 uppercase">' + p.type + '</td>' +
+              '<td class="px-5 py-3">' + p.uom + '</td>' +
+              '<td class="px-5 py-3">Rp ' + (p.standardPrice || 0).toLocaleString('id-ID') + '</td>' +
+              '<td class="px-5 py-3 font-mono text-slate-500">' + (p.serialNumber || '-') + '</td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick="openEditProductModal(\'' + p.id + '\')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteProduct(\'' + p.id + '\', \'' + p.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
+            '</tr>';
+          });
+        }
 
         html += '</tbody></table></div>';
         document.getElementById('main-content').innerHTML = html;
@@ -516,46 +673,751 @@ export const odooShellHtml = `<!DOCTYPE html>
     }
 
     function openCreateModal() {
+      document.getElementById('edit-record-id').value = '';
       document.getElementById('modal-title').innerText = 'Tambah Data ' + state.currentView;
       var content = document.getElementById('modal-form-content');
       if (state.currentView === 'students') {
-        content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Lengkap</label><input id="form-name" type="text" placeholder="Nama Siswa..." class="w-full text-xs p-2 border rounded"></div>' +
-          '<div><label class="block font-semibold text-slate-700 mb-1">NIS / NISN</label><input id="form-nis" type="text" placeholder="202601..." class="w-full text-xs p-2 border rounded"></div>';
+        content.innerHTML = renderStudentFormHtml({});
+      } else if (state.currentView === 'academics') {
+        content.innerHTML = '<div class="space-y-4">' +
+          '<div class="flex gap-4 border-b border-slate-200 pb-3">' +
+            '<button type="button" onclick="renderAcademicModalTab(\'year\')" id="tab-btn-ay" class="text-xs font-bold px-3 py-1.5 rounded bg-purple-50 text-[#714B67] border border-purple-200">+ Tahun Ajaran</button>' +
+            '<button type="button" onclick="renderAcademicModalTab(\'subject\')" id="tab-btn-subj" class="text-xs font-medium px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 border border-transparent">+ Mata Pelajaran</button>' +
+          '</div>' +
+          '<div id="academic-modal-body">' + renderAcademicYearFormHtml({}) + '</div>' +
+        '</div>';
+      } else if (state.currentView === 'exams') {
+        content.innerHTML = renderExamFormHtml({});
+      } else if (state.currentView === 'inventory') {
+        content.innerHTML = renderProductFormHtml({});
+      } else if (state.currentView === 'finance') {
+        content.innerHTML = renderInvoiceFormHtml({});
       } else {
-        content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Item / Dokumen</label><input id="form-name" type="text" placeholder="Nama..." class="w-full text-xs p-2 border rounded"></div>';
+        content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Item / Dokumen</label><input id="form-name" type="text" placeholder="Nama..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none"></div>';
       }
       document.getElementById('create-modal').classList.remove('hidden');
     }
 
+    function renderAcademicModalTab(tab) {
+      var body = document.getElementById('academic-modal-body');
+      var btnAy = document.getElementById('tab-btn-ay');
+      var btnSubj = document.getElementById('tab-btn-subj');
+      if (tab === 'year') {
+        btnAy.className = 'text-xs font-bold px-3 py-1.5 rounded bg-purple-50 text-[#714B67] border border-purple-200';
+        btnSubj.className = 'text-xs font-medium px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 border border-transparent';
+        body.innerHTML = renderAcademicYearFormHtml({});
+      } else {
+        btnSubj.className = 'text-xs font-bold px-3 py-1.5 rounded bg-purple-50 text-[#714B67] border border-purple-200';
+        btnAy.className = 'text-xs font-medium px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 border border-transparent';
+        body.innerHTML = renderSubjectFormHtml({});
+      }
+    }
+
+    function openCreateAcademicYearModal() {
+      document.getElementById('edit-record-id').value = '';
+      document.getElementById('modal-title').innerText = 'Tambah Tahun Ajaran';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderAcademicYearFormHtml({});
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openCreateSubjectModal() {
+      document.getElementById('edit-record-id').value = '';
+      document.getElementById('modal-title').innerText = 'Tambah Mata Pelajaran';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderSubjectFormHtml({});
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openEditStudentModal(id) {
+      var student = state.cache.students.find(function(x) { return x.id === id; }) || {};
+      document.getElementById('edit-record-id').value = student.id || id;
+      document.getElementById('modal-title').innerText = 'Edit Data Siswa';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderStudentFormHtml(student);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openEditAcademicYearModal(id) {
+      var year = state.cache.academicYears.find(function(x) { return x.id === id; }) || {};
+      document.getElementById('edit-record-id').value = year.id || id;
+      document.getElementById('modal-title').innerText = 'Edit Tahun Ajaran';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderAcademicYearFormHtml(year);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openEditSubjectModal(id) {
+      var subject = state.cache.subjects.find(function(x) { return x.id === id; }) || {};
+      document.getElementById('edit-record-id').value = subject.id || id;
+      document.getElementById('modal-title').innerText = 'Edit Mata Pelajaran';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderSubjectFormHtml(subject);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openEditExamModal(id) {
+      var exam = state.cache.exams.find(function(x) { return x.id === id; }) || {};
+      document.getElementById('edit-record-id').value = exam.id || id;
+      document.getElementById('modal-title').innerText = 'Edit Sesi Ujian';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderExamFormHtml(exam);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openEditProductModal(id) {
+      var product = state.cache.inventory.find(function(x) { return x.id === id; }) || {};
+      document.getElementById('edit-record-id').value = product.id || id;
+      document.getElementById('modal-title').innerText = 'Edit Produk / Aset';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderProductFormHtml(product);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function renderExamFormHtml(e) {
+      var statusVal = e.status || 'draft';
+      var today = new Date().toISOString().split('T')[0];
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Ujian *</label>' +
+          '<input id="form-name" type="text" value="' + (e.name || '') + '" placeholder="e.g. UTS Matematika Wajib" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Mata Pelajaran *</label>' +
+            '<input id="form-exam-subject" type="text" value="' + (e.subjectId || 'MAT-10') + '" placeholder="e.g. MAT-10" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Ujian *</label>' +
+            '<input id="form-exam-date" type="date" value="' + (e.examDate || today) + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Passing Marks / KKM *</label>' +
+            '<input id="form-exam-passing" type="number" value="' + (e.passingMarks !== undefined ? e.passingMarks : 75) + '" placeholder="75" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Bobot Penilaian (%) *</label>' +
+            '<input id="form-exam-weight" type="number" value="' + (e.weightage !== undefined ? e.weightage : 30) + '" placeholder="30" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Status</label>' +
+          '<select id="form-exam-status" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+            '<option value="draft"' + (statusVal === 'draft' ? ' selected' : '') + '>Draft</option>' +
+            '<option value="published"' + (statusVal === 'published' ? ' selected' : '') + '>Published</option>' +
+            '<option value="closed"' + (statusVal === 'closed' ? ' selected' : '') + '>Closed</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderInvoiceFormHtml(inv) {
+      var defaultInvNumber = 'INV/' + new Date().getFullYear() + '/' + Math.floor(Math.random() * 9000 + 1000);
+      var today = new Date().toISOString().split('T')[0];
+      var nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      var studentOptions = '<option value="">-- Pilih Siswa / Partner --</option>';
+      (state.cache.students || []).forEach(function(s) {
+        var isSelected = (inv.studentId === s.id) || (inv.partnerId === s.id);
+        studentOptions += '<option value="' + s.id + '"' + (isSelected ? ' selected' : '') + '>' + s.name + ' (' + s.nis + ')</option>';
+      });
+
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nomor Invoice *</label>' +
+          '<input id="form-inv-number" type="text" value="' + (inv.name || defaultInvNumber) + '" placeholder="e.g. INV/2026/10/001" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none font-mono">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Invoice *</label>' +
+            '<input id="form-inv-date" type="date" value="' + (inv.date || today) + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Jatuh Tempo *</label>' +
+            '<input id="form-inv-due-date" type="date" value="' + (inv.invoiceDueDate || nextMonth) + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Pilih Siswa / Partner *</label>' +
+          '<select id="form-inv-partner-id" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+            studentOptions +
+          '</select>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Siswa / Partner (Manual / Opsional)</label>' +
+          '<input id="form-name" type="text" value="' + (inv.studentName || '') + '" placeholder="e.g. Andi Pratama / Siswa Kelas X" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nominal Biaya / Amount (Rp) *</label>' +
+          '<input id="form-inv-amount" type="number" value="' + (inv.amountTotal || 500000) + '" placeholder="500000" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Keterangan / Deskripsi</label>' +
+          '<textarea id="form-inv-desc" rows="2" placeholder="e.g. Iuran SPP Bulan November 2026" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' + (inv.description || 'Iuran SPP Siswa') + '</textarea>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderProductFormHtml(p) {
+      var typeVal = p.type || 'storable';
+      var uomVal = p.uom || 'pcs';
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Produk / Barang *</label>' +
+          '<input id="form-name" type="text" value="' + (p.name || '') + '" placeholder="e.g. Meja Belajar Siswa" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Kode Produk *</label>' +
+          '<input id="form-prod-code" type="text" value="' + (p.code || '') + '" placeholder="e.g. AST-MJ01" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tipe Produk</label>' +
+            '<select id="form-prod-type" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="storable"' + (typeVal === 'storable' ? ' selected' : '') + '>Storable (Barang Stok)</option>' +
+              '<option value="consumable"' + (typeVal === 'consumable' ? ' selected' : '') + '>Consumable (Barang Habis Pakai)</option>' +
+              '<option value="service"' + (typeVal === 'service' ? ' selected' : '') + '>Service (Jasa)</option>' +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Satuan / UoM</label>' +
+            '<select id="form-prod-uom" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="pcs"' + (uomVal === 'pcs' ? ' selected' : '') + '>pcs</option>' +
+              '<option value="unit"' + (uomVal === 'unit' ? ' selected' : '') + '>unit</option>' +
+              '<option value="set"' + (uomVal === 'set' ? ' selected' : '') + '>set</option>' +
+              '<option value="rim"' + (uomVal === 'rim' ? ' selected' : '') + '>rim</option>' +
+              '<option value="box"' + (uomVal === 'box' ? ' selected' : '') + '>box</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Harga Standar (Rp)</label>' +
+            '<input id="form-prod-standard-price" type="number" value="' + (p.standardPrice !== undefined ? p.standardPrice : 0) + '" placeholder="0" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Nomor Seri Aset (Opsional)</label>' +
+            '<input id="form-prod-serial" type="text" value="' + (p.serialNumber || '') + '" placeholder="e.g. SN-123456" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderSubjectFormHtml(sub) {
+      var typeVal = sub.type || 'compulsory';
+      return '<div class="space-y-3">' +
+        '<input type="hidden" id="form-academic-type" value="subject">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Mata Pelajaran *</label>' +
+          '<input id="form-name" type="text" value="' + (sub.name || '') + '" placeholder="e.g. Matematika Wajib" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Kode Mata Pelajaran *</label>' +
+          '<input id="form-subj-code" type="text" value="' + (sub.code || '') + '" placeholder="e.g. MAT-10" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tipe Mapel</label>' +
+            '<select id="form-subj-type" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="compulsory"' + (typeVal === 'compulsory' ? ' selected' : '') + '>Wajib (Compulsory)</option>' +
+              '<option value="elective"' + (typeVal === 'elective' ? ' selected' : '') + '>Peminatan (Elective)</option>' +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Bobot Penilaian</label>' +
+            '<input id="form-subj-weightage" type="number" value="' + (sub.weightage !== undefined ? sub.weightage : 100) + '" placeholder="100" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderAcademicYearFormHtml(y) {
+      var statusVal = y.status || 'active';
+      return '<div class="space-y-3">' +
+        '<input type="hidden" id="form-academic-type" value="year">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Tahun Ajaran *</label>' +
+          '<input id="form-name" type="text" value="' + (y.name || '') + '" placeholder="e.g. 2026/2027" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Kode *</label>' +
+          '<input id="form-ay-code" type="text" value="' + (y.code || '') + '" placeholder="e.g. AY-2627" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Mulai *</label>' +
+            '<input id="form-start-date" type="date" value="' + (y.startDate || '') + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Selesai *</label>' +
+            '<input id="form-end-date" type="date" value="' + (y.endDate || '') + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Status</label>' +
+          '<select id="form-ay-status" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+            '<option value="draft"' + (statusVal === 'draft' ? ' selected' : '') + '>Draft</option>' +
+            '<option value="active"' + (statusVal === 'active' ? ' selected' : '') + '>Aktif (Active)</option>' +
+            '<option value="closed"' + (statusVal === 'closed' ? ' selected' : '') + '>Selesai (Closed)</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderStudentFormHtml(s) {
+      var genderVal = s.gender || 'male';
+      var statusVal = s.status || 'active';
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Lengkap *</label>' +
+          '<input id="form-name" type="text" value="' + (s.name || '') + '" placeholder="Nama Siswa..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">NIS *</label>' +
+            '<input id="form-nis" type="text" value="' + (s.nis || '') + '" placeholder="e.g. 20260101" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">NISN *</label>' +
+            '<input id="form-nisn" type="text" value="' + (s.nisn || '') + '" placeholder="e.g. 0012345678" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Jenis Kelamin</label>' +
+            '<select id="form-gender" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="male"' + (genderVal === 'male' ? ' selected' : '') + '>Laki-laki (Male)</option>' +
+              '<option value="female"' + (genderVal === 'female' ? ' selected' : '') + '>Perempuan (Female)</option>' +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Status</label>' +
+            '<select id="form-status" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="active"' + (statusVal === 'active' ? ' selected' : '') + '>Aktif (Active)</option>' +
+              '<option value="graduated"' + (statusVal === 'graduated' ? ' selected' : '') + '>Lulus (Graduated)</option>' +
+              '<option value="transferred"' + (statusVal === 'transferred' ? ' selected' : '') + '>Pindah (Transferred)</option>' +
+              '<option value="inactive"' + (statusVal === 'inactive' ? ' selected' : '') + '>Nonaktif (Inactive)</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tempat Lahir</label>' +
+            '<input id="form-birth-place" type="text" value="' + (s.birthPlace || '') + '" placeholder="e.g. Jakarta" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Lahir</label>' +
+            '<input id="form-birth-date" type="date" value="' + (s.birthDate || '') + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Alamat Tinggal</label>' +
+          '<textarea id="form-address" rows="2" placeholder="Alamat lengkap..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' + (s.address || '') + '</textarea>' +
+        '</div>' +
+      '</div>';
+    }
+
     function closeCreateModal() {
       document.getElementById('create-modal').classList.add('hidden');
+      document.getElementById('edit-record-id').value = '';
     }
 
     async function saveModalRecord() {
       var nameInput = document.getElementById('form-name');
-      var nisInput = document.getElementById('form-nis');
       var nameVal = nameInput ? nameInput.value.trim() : '';
       if (!nameVal) { alert('Nama wajib diisi.'); return; }
+
+      var editId = document.getElementById('edit-record-id').value;
+
       try {
         if (state.currentView === 'students') {
+          var nisInput = document.getElementById('form-nis');
+          var nisnInput = document.getElementById('form-nisn');
+          var genderInput = document.getElementById('form-gender');
+          var statusInput = document.getElementById('form-status');
+          var birthPlaceInput = document.getElementById('form-birth-place');
+          var birthDateInput = document.getElementById('form-birth-date');
+          var addressInput = document.getElementById('form-address');
+
           var nisVal = nisInput && nisInput.value.trim() ? nisInput.value.trim() : ('2026' + Math.floor(Math.random() * 9000 + 1000));
-          await fetch('/api/students', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ schoolId: 'sch_smp_01', name: nameVal, nis: nisVal, nisn: nisVal + '0', status: 'active' })
-          });
+          var nisnVal = nisnInput && nisnInput.value.trim() ? nisnInput.value.trim() : (nisVal + '0');
+          var genderVal = genderInput ? genderInput.value : 'male';
+          var statusVal = statusInput ? statusInput.value : 'active';
+          var birthPlaceVal = birthPlaceInput ? birthPlaceInput.value.trim() : '';
+          var birthDateVal = birthDateInput ? birthDateInput.value : '';
+          var addressVal = addressInput ? addressInput.value.trim() : '';
+
+          var payload = {
+            schoolId: 'sch_smp_01',
+            name: nameVal,
+            nis: nisVal,
+            nisn: nisnVal,
+            gender: genderVal,
+            status: statusVal,
+            birthPlace: birthPlaceVal,
+            birthDate: birthDateVal,
+            address: addressVal
+          };
+
+          if (editId) {
+            var updateRes = await fetch('/api/students/' + editId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!updateRes.ok) {
+              var errData = await updateRes.json();
+              throw new Error(errData.error || 'Gagal mengupdate siswa');
+            }
+          } else {
+            var createRes = await fetch('/api/students', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!createRes.ok) {
+              var errData = await createRes.json();
+              throw new Error(errData.error || 'Gagal menambahkan siswa');
+            }
+          }
+        } else if (state.currentView === 'academics') {
+          var academicTypeInput = document.getElementById('form-academic-type');
+          var isSubject = academicTypeInput && academicTypeInput.value === 'subject';
+
+          if (isSubject) {
+            var subjCodeInput = document.getElementById('form-subj-code');
+            var subjTypeInput = document.getElementById('form-subj-type');
+            var subjWeightInput = document.getElementById('form-subj-weightage');
+
+            var subjCodeVal = subjCodeInput && subjCodeInput.value.trim() ? subjCodeInput.value.trim() : ('SUB-' + Math.floor(Math.random() * 90 + 10));
+            var subjTypeVal = subjTypeInput ? subjTypeInput.value : 'compulsory';
+            var subjWeightVal = subjWeightInput ? Number(subjWeightInput.value) : 100;
+
+            var subjPayload = {
+              schoolId: 'sch_smp_01',
+              name: nameVal,
+              code: subjCodeVal,
+              type: subjTypeVal,
+              weightage: subjWeightVal
+            };
+
+            if (editId) {
+              var updateSubjRes = await fetch('/api/academic/subjects/' + editId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(subjPayload)
+              });
+              if (!updateSubjRes.ok) {
+                var errSubjData = await updateSubjRes.json();
+                throw new Error(errSubjData.error || 'Gagal mengupdate mata pelajaran');
+              }
+            } else {
+              var createSubjRes = await fetch('/api/academic/subjects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(subjPayload)
+              });
+              if (!createSubjRes.ok) {
+                var errSubjData = await createSubjRes.json();
+                throw new Error(errSubjData.error || 'Gagal menambahkan mata pelajaran');
+              }
+            }
+          } else {
+            var codeInput = document.getElementById('form-ay-code');
+            var startDateInput = document.getElementById('form-start-date');
+            var endDateInput = document.getElementById('form-end-date');
+            var statusInput = document.getElementById('form-ay-status');
+
+            var codeVal = codeInput && codeInput.value.trim() ? codeInput.value.trim() : ('AY-' + Math.floor(Math.random() * 90 + 10));
+            var startDateVal = startDateInput ? startDateInput.value : '';
+            var endDateVal = endDateInput ? endDateInput.value : '';
+            var statusVal = statusInput ? statusInput.value : 'active';
+
+            var ayPayload = {
+              schoolId: 'sch_smp_01',
+              name: nameVal,
+              code: codeVal,
+              startDate: startDateVal,
+              endDate: endDateVal,
+              status: statusVal
+            };
+
+            if (editId) {
+              var updateAyRes = await fetch('/api/academic/years/' + editId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(ayPayload)
+              });
+              if (!updateAyRes.ok) {
+                var errData = await updateAyRes.json();
+                throw new Error(errData.error || 'Gagal mengupdate tahun ajaran');
+              }
+            } else {
+              var createAyRes = await fetch('/api/academic/years', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(ayPayload)
+              });
+              if (!createAyRes.ok) {
+                var errData = await createAyRes.json();
+                throw new Error(errData.error || 'Gagal menambahkan tahun ajaran');
+              }
+            }
+          }
+        } else if (state.currentView === 'exams') {
+          var subjectInput = document.getElementById('form-exam-subject');
+          var examDateInput = document.getElementById('form-exam-date');
+          var passingInput = document.getElementById('form-exam-passing');
+          var weightInput = document.getElementById('form-exam-weight');
+          var statusExamInput = document.getElementById('form-exam-status');
+
+          var subjectVal = subjectInput && subjectInput.value.trim() ? subjectInput.value.trim() : 'MAT-10';
+          var examDateVal = examDateInput ? examDateInput.value : new Date().toISOString().split('T')[0];
+          var passingVal = passingInput ? Number(passingInput.value) : 75;
+          var weightVal = weightInput ? Number(weightInput.value) : 30;
+          var statusExamVal = statusExamInput ? statusExamInput.value : 'draft';
+
+          var examPayload = {
+            schoolId: 'sch_smp_01',
+            academicYearId: 'ay_2025_ganjil',
+            termId: 'term_01',
+            classroomId: 'cls_x_mipa_1',
+            subjectId: subjectVal,
+            name: nameVal,
+            examDate: examDateVal,
+            totalMarks: 100,
+            passingMarks: passingVal,
+            weightage: weightVal,
+            status: statusExamVal
+          };
+
+          if (editId) {
+            var updateExamRes = await fetch('/api/exams/sessions/' + editId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(examPayload)
+            });
+            if (!updateExamRes.ok) {
+              var errExamData = await updateExamRes.json();
+              throw new Error(errExamData.error || 'Gagal mengupdate sesi ujian');
+            }
+          } else {
+            var createExamRes = await fetch('/api/exams/sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(examPayload)
+            });
+            if (!createExamRes.ok) {
+              var errExamData = await createExamRes.json();
+              throw new Error(errExamData.error || 'Gagal membuat sesi ujian');
+            }
+          }
         } else if (state.currentView === 'inventory') {
-          await fetch('/api/inventory/products', {
+          var prodCodeInput = document.getElementById('form-prod-code');
+          var prodTypeInput = document.getElementById('form-prod-type');
+          var prodUomInput = document.getElementById('form-prod-uom');
+          var prodPriceInput = document.getElementById('form-prod-standard-price');
+          var prodSerialInput = document.getElementById('form-prod-serial');
+
+          var prodCodeVal = prodCodeInput && prodCodeInput.value.trim() ? prodCodeInput.value.trim() : ('PRD-' + Math.floor(Math.random() * 900 + 100));
+          var prodTypeVal = prodTypeInput ? prodTypeInput.value : 'storable';
+          var prodUomVal = prodUomInput ? prodUomInput.value : 'pcs';
+          var prodPriceVal = prodPriceInput ? Number(prodPriceInput.value) : 0;
+          var prodSerialVal = prodSerialInput && prodSerialInput.value.trim() ? prodSerialInput.value.trim() : null;
+
+          var prodPayload = {
+            schoolId: 'sch_smp_01',
+            name: nameVal,
+            code: prodCodeVal,
+            type: prodTypeVal,
+            uom: prodUomVal,
+            standardPrice: prodPriceVal,
+            serialNumber: prodSerialVal
+          };
+
+          if (editId) {
+            var updateProdRes = await fetch('/api/inventory/products/' + editId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(prodPayload)
+            });
+            if (!updateProdRes.ok) {
+              var errData = await updateProdRes.json();
+              throw new Error(errData.error || 'Gagal mengupdate produk');
+            }
+          } else {
+            var createProdRes = await fetch('/api/inventory/products', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(prodPayload)
+            });
+            if (!createProdRes.ok) {
+              var errData = await createProdRes.json();
+              throw new Error(errData.error || 'Gagal menambahkan produk');
+            }
+          }
+        } else if (state.currentView === 'finance') {
+          var invNumberInput = document.getElementById('form-inv-number');
+          var invDateInput = document.getElementById('form-inv-date');
+          var invDueDateInput = document.getElementById('form-inv-due-date');
+          var invPartnerInput = document.getElementById('form-inv-partner-id');
+          var invAmountInput = document.getElementById('form-inv-amount');
+          var invDescInput = document.getElementById('form-inv-desc');
+
+          var invNumberVal = invNumberInput && invNumberInput.value.trim() ? invNumberInput.value.trim() : ('INV/' + new Date().getFullYear() + '/' + Math.floor(Math.random() * 9000 + 1000));
+          var invDateVal = invDateInput ? invDateInput.value : new Date().toISOString().split('T')[0];
+          var invDueDateVal = invDueDateInput ? invDueDateInput.value : null;
+          var invPartnerIdVal = invPartnerInput && invPartnerInput.value ? invPartnerInput.value : null;
+          var invAmountVal = invAmountInput ? Number(invAmountInput.value) : 500000;
+          var invDescVal = invDescInput && invDescInput.value.trim() ? invDescInput.value.trim() : 'Tagihan SPP Siswa';
+
+          var invPayload = {
+            schoolId: 'school_sma_hb',
+            journalId: 'jrn_sale',
+            partnerId: invPartnerIdVal,
+            studentId: invPartnerIdVal,
+            name: invNumberVal,
+            date: invDateVal,
+            dueDate: invDueDateVal,
+            amountTotal: invAmountVal,
+            description: invDescVal + (nameVal ? ' - ' + nameVal : ''),
+            receivableAccountId: 'coa_ar',
+            incomeAccountId: 'coa_rev_spp'
+          };
+
+          var createInvRes = await fetch('/api/finance/invoices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ schoolId: 'sch_smp_01', name: nameVal, code: 'PRD-' + Math.floor(Math.random() * 900 + 100), standardPrice: 50000, type: 'storable' })
+            body: JSON.stringify(invPayload)
           });
+          if (!createInvRes.ok) {
+            var errInvData = await createInvRes.json();
+            throw new Error(errInvData.error || 'Gagal membuat tagihan SPP');
+          }
         }
         closeCreateModal();
         navigate(state.currentView);
       } catch (err) {
         alert('Gagal menyimpan ke D1: ' + err.message);
       }
+    }
+
+    async function deleteStudent(studentId, studentName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus siswa "' + studentName + '"? Data yang dihapus tidak dapat dikembalikan.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/students/' + studentId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus siswa');
+        }
+        renderStudents();
+      } catch (err) {
+        alert('Gagal menghapus siswa: ' + err.message);
+      }
+    }
+
+    async function deleteAcademicYear(yearId, yearName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus tahun ajaran "' + yearName + '"? Data yang dihapus tidak dapat dikembalikan.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/academic/years/' + yearId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus tahun ajaran');
+        }
+        renderAcademics();
+      } catch (err) {
+        alert('Gagal menghapus tahun ajaran: ' + err.message);
+      }
+    }
+
+    async function deleteSubject(subjectId, subjectName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus mata pelajaran "' + subjectName + '"? Data yang dihapus tidak dapat dikembalikan.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/academic/subjects/' + subjectId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus mata pelajaran');
+        }
+        renderAcademics();
+      } catch (err) {
+        alert('Gagal menghapus mata pelajaran: ' + err.message);
+      }
+    }
+
+    async function deleteExamSession(sessionId, sessionName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus sesi ujian "' + sessionName + '"? Seluruh nilai terkait akan dihapus secara atomik.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/exams/sessions/' + sessionId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus sesi ujian');
+        }
+        renderExams();
+      } catch (err) {
+        alert('Gagal menghapus sesi ujian: ' + err.message);
+      }
+    }
+
+    async function deleteProduct(productId, productName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus barang/produk "' + productName + '"? Data yang dihapus tidak dapat dikembalikan.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/inventory/products/' + productId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus produk');
+        }
+        renderInventory();
+      } catch (err) {
+        alert('Gagal menghapus produk: ' + err.message);
+      }
+    }
+
+    async function deleteInvoice(invoiceId, invoiceName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus tagihan "' + invoiceName + '"? Ayat jurnal double-entry terkait akan dibatalkan/dihapus secara atomik dari D1.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/finance/invoices/' + invoiceId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus tagihan');
+        }
+        renderFinance();
+      } catch (err) {
+        alert('Gagal menghapus tagihan: ' + err.message);
+      }
+    }
+
+    function viewInvoiceDetail(id) {
+      var inv = state.cache.invoices.find(function(x) { return x.id === id; }) || {};
+      alert('Detail Tagihan ' + (inv.name || id) + ':\n' +
+        'Status Bayar: ' + (inv.paymentState === 'paid' ? 'LUNAS' : 'BELUM LUNAS') + '\n' +
+        'Total: Rp ' + (inv.amountTotal || 0).toLocaleString('id-ID') + '\n' +
+        'Sisa: Rp ' + (inv.amountResidual || 0).toLocaleString('id-ID') + '\n' +
+        'Jatuh Tempo: ' + (inv.invoiceDueDate || '-'));
     }
 
     function viewReportCard(studentId) {
