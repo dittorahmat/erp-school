@@ -34,6 +34,11 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Setiap view / tab / menu WAJIB terhubung secara dinamis via API (`fetch('/api/...')`) ke database Cloudflare D1.
   - Setiap modal atau form create WAJIB melakukan `fetch('/api/...', { method: 'POST' })` nyata untuk persistensi data ke D1.
   - Setiap menu navigasi, tombol buat baru, filter, aksi baris tabel, dan avatar profil WAJIB memiliki event handler interaktif yang berfungsi (termasuk fitur logout dan switch account).
+- **Deep Modules & Clean Seams (Anti Shallow Controllers)**:
+  - **MANDAT KETAT**: Route handlers HTTP (`src/routes/`) WAJIB berupa adapter tipis (thin HTTP adapters). Seluruh aturan bisnis, invarian balancing (debit = credit), kompilasi batch relasional D1, kalkulasi agregat/tally, dan validasi status WAJIB berada di dalam **Deep Domain Modules** (`src/domain/`).
+  - Dilarang keras mengimpor `drizzle-orm/d1` langsung di dalam file `src/routes/*`. Seluruh interaksi database harus didelegasikan ke modul `src/domain/*`. Guardrail ini ditegakkan secara mekanis via `tests/architecture-guardrail.test.ts`.
+  - Seluruh modul domain WAJIB diekspor terpusat melalui `src/domain/index.ts` sebagai single seam index.
+  - Setiap modul domain harus lolos *deletion test* dan dapat diuji secara langsung (*the interface is the test surface*) tanpa harus membungkus atau menguji via lapisan request HTTP router.
 - **Arsitektur Pemisahan Kode UI**:
   - Dilarang menumpuk ribuan baris HTML/JS interaktif di dalam template literal file server (`src/index.ts`).
   - Selalu pisahkan ke dalam folder view modular (`src/views/`) agar terhindar dari syntax/parsing error template string nested backticks.

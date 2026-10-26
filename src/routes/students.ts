@@ -1,48 +1,22 @@
 import { Hono } from "hono";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "../db/schema";
-import { desc } from "drizzle-orm";
+import { studentManagement } from "../domain/students";
 import type { Bindings } from "../index";
-import { generateId } from "../lib/utils";
 
 export const studentRouter = new Hono<{ Bindings: Bindings }>();
 
-// --------------------------------------------------------------------------
 // Students List & Create
-// --------------------------------------------------------------------------
 studentRouter.get("/", async (c) => {
-  const db = drizzle(c.env.DB, { schema });
-  const studentsList = await db.select().from(schema.students).orderBy(desc(schema.students.createdAt));
+  const studentsList = await studentManagement.getStudents(c.env.DB);
   return c.json({ data: studentsList });
 });
 
 studentRouter.post("/", async (c) => {
   const body = await c.req.json();
-  const db = drizzle(c.env.DB, { schema });
-  const newStudent = {
-    id: body.id || generateId("std"),
-    schoolId: body.schoolId,
-    guardianId: body.guardianId || null,
-    nis: body.nis,
-    nisn: body.nisn,
-    name: body.name,
-    gender: body.gender || "male",
-    birthDate: body.birthDate || null,
-    birthPlace: body.birthPlace || null,
-    address: body.address || null,
-    avatarUrl: body.avatarUrl || null,
-    documentUrl: body.documentUrl || null,
-    status: body.status || "active",
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  await db.insert(schema.students).values(newStudent);
+  const newStudent = await studentManagement.createStudent(c.env.DB, body);
   return c.json({ success: true, data: newStudent }, 201);
 });
 
-// --------------------------------------------------------------------------
 // Cloudflare R2 Direct Upload for Student Avatars & Documents
-// --------------------------------------------------------------------------
 studentRouter.post("/upload", async (c) => {
   const body = await c.req.parseBody();
   const file = body["file"];
@@ -55,14 +29,14 @@ studentRouter.post("/upload", async (c) => {
 
   await c.env.STORAGE.put(key, arrayBuffer, {
     httpMetadata: {
-      contentType: file.type
-    }
+      contentType: file.type,
+    },
   });
 
   return c.json({
     success: true,
     key,
-    url: `/api/students/files/${key}`
+    url: `/api/students/files/${key}`,
   });
 });
 
