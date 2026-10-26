@@ -5,6 +5,7 @@ import { academicRouter } from "./routes/academic";
 import { studentRouter } from "./routes/students";
 import { attendanceRouter } from "./routes/attendance";
 import { examRouter } from "./routes/exams";
+import { financeRouter } from "./routes/finance";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./db/schema";
 import { eq } from "drizzle-orm";
@@ -25,6 +26,7 @@ app.route("/api/academic", academicRouter);
 app.route("/api/students", studentRouter);
 app.route("/api/attendance", attendanceRouter);
 app.route("/api/exams", examRouter);
+app.route("/api/finance", financeRouter);
 
 // Healthcheck
 app.get("/api/health", (c) => {

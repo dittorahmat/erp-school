@@ -272,3 +272,70 @@ export const examMarks = sqliteTable('exam_marks', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
+
+// --------------------------------------------------------------------------
+// Double-Entry Accounting (Odoo Model: COA, Journals, Moves & Move Lines)
+// --------------------------------------------------------------------------
+export const chartOfAccounts = sqliteTable('chart_of_accounts', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  code: text('code').notNull(), // e.g. "1100" (Kas), "1200" (Piutang Siswa), "4100" (Pendapatan SPP)
+  name: text('name').notNull(),
+  type: text('type').notNull(), // asset, liability, equity, income, expense
+  reconcile: integer('reconcile', { mode: 'boolean' }).default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+export const journals = sqliteTable('journals', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // "Jurnal Tagihan Sekolah", "Kas Sekolah", "Bank BCA"
+  code: text('code').notNull(), // "INV", "CASH", "BANK", "GEN"
+  type: text('type').notNull(), // sale, purchase, cash, bank, general
+  defaultAccountId: text('default_account_id').references(() => chartOfAccounts.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+export const accountMoves = sqliteTable('account_moves', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  journalId: text('journal_id').notNull().references(() => journals.id),
+  studentId: text('student_id').references(() => students.id),
+  name: text('name').notNull(), // e.g. "INV/2026/10/0001"
+  date: text('date').notNull(), // "2026-10-26"
+  moveType: text('move_type').notNull().default('out_invoice'), // out_invoice (SPP bill), entry (Journal voucher), out_refund
+  amountTotal: real('amount_total').notNull().default(0),
+  amountResidual: real('amount_residual').notNull().default(0),
+  state: text('state').notNull().default('draft'), // draft, posted, cancel
+  paymentState: text('payment_state').notNull().default('not_paid'), // not_paid, in_payment, paid, partial
+  invoiceDueDate: text('invoice_due_date'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const accountMoveLines = sqliteTable('account_move_lines', {
+  id: text('id').primaryKey(),
+  moveId: text('move_id').notNull().references(() => accountMoves.id, { onDelete: 'cascade' }),
+  accountId: text('account_id').notNull().references(() => chartOfAccounts.id),
+  studentId: text('student_id').references(() => students.id),
+  name: text('name').notNull(), // label description e.g. "SPP Bulan November 2026"
+  debit: real('debit').notNull().default(0),
+  credit: real('credit').notNull().default(0),
+  reconciled: integer('reconciled', { mode: 'boolean' }).default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+export const accountPayments = sqliteTable('account_payments', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  journalId: text('journal_id').notNull().references(() => journals.id),
+  moveId: text('move_id').references(() => accountMoves.id), // reconciled invoice
+  studentId: text('student_id').references(() => students.id),
+  name: text('name').notNull(), // e.g. "PAY/2026/10/0001"
+  paymentDate: text('payment_date').notNull(),
+  amount: real('amount').notNull(),
+  paymentMethod: text('payment_method').notNull().default('cash'), // cash, bank_transfer, qris
+  reference: text('reference'),
+  state: text('state').notNull().default('posted'), // draft, posted, cancelled
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
