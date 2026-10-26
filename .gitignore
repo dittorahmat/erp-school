@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+.wrangler/
+build/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
