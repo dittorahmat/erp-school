@@ -279,9 +279,9 @@ export const examMarks = sqliteTable('exam_marks', {
 export const chartOfAccounts = sqliteTable('chart_of_accounts', {
   id: text('id').primaryKey(),
   schoolId: text('school_id').notNull().references(() => schools.id),
-  code: text('code').notNull(), // e.g. "1100" (Kas), "1200" (Piutang Siswa), "4100" (Pendapatan SPP)
+  code: text('code').notNull(),
   name: text('name').notNull(),
-  type: text('type').notNull(), // asset, liability, equity, income, expense
+  type: text('type').notNull(),
   reconcile: integer('reconcile', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
@@ -289,9 +289,9 @@ export const chartOfAccounts = sqliteTable('chart_of_accounts', {
 export const journals = sqliteTable('journals', {
   id: text('id').primaryKey(),
   schoolId: text('school_id').notNull().references(() => schools.id),
-  name: text('name').notNull(), // "Jurnal Tagihan Sekolah", "Kas Sekolah", "Bank BCA"
-  code: text('code').notNull(), // "INV", "CASH", "BANK", "GEN"
-  type: text('type').notNull(), // sale, purchase, cash, bank, general
+  name: text('name').notNull(),
+  code: text('code').notNull(),
+  type: text('type').notNull(),
   defaultAccountId: text('default_account_id').references(() => chartOfAccounts.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
@@ -301,13 +301,13 @@ export const accountMoves = sqliteTable('account_moves', {
   schoolId: text('school_id').notNull().references(() => schools.id),
   journalId: text('journal_id').notNull().references(() => journals.id),
   studentId: text('student_id').references(() => students.id),
-  name: text('name').notNull(), // e.g. "INV/2026/10/0001"
-  date: text('date').notNull(), // "2026-10-26"
-  moveType: text('move_type').notNull().default('out_invoice'), // out_invoice (SPP bill), entry (Journal voucher), out_refund
+  name: text('name').notNull(),
+  date: text('date').notNull(),
+  moveType: text('move_type').notNull().default('out_invoice'),
   amountTotal: real('amount_total').notNull().default(0),
   amountResidual: real('amount_residual').notNull().default(0),
-  state: text('state').notNull().default('draft'), // draft, posted, cancel
-  paymentState: text('payment_state').notNull().default('not_paid'), // not_paid, in_payment, paid, partial
+  state: text('state').notNull().default('draft'),
+  paymentState: text('payment_state').notNull().default('not_paid'),
   invoiceDueDate: text('invoice_due_date'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
@@ -318,7 +318,7 @@ export const accountMoveLines = sqliteTable('account_move_lines', {
   moveId: text('move_id').notNull().references(() => accountMoves.id, { onDelete: 'cascade' }),
   accountId: text('account_id').notNull().references(() => chartOfAccounts.id),
   studentId: text('student_id').references(() => students.id),
-  name: text('name').notNull(), // label description e.g. "SPP Bulan November 2026"
+  name: text('name').notNull(),
   debit: real('debit').notNull().default(0),
   credit: real('credit').notNull().default(0),
   reconciled: integer('reconciled', { mode: 'boolean' }).default(false),
@@ -329,13 +329,71 @@ export const accountPayments = sqliteTable('account_payments', {
   id: text('id').primaryKey(),
   schoolId: text('school_id').notNull().references(() => schools.id),
   journalId: text('journal_id').notNull().references(() => journals.id),
-  moveId: text('move_id').references(() => accountMoves.id), // reconciled invoice
+  moveId: text('move_id').references(() => accountMoves.id),
   studentId: text('student_id').references(() => students.id),
-  name: text('name').notNull(), // e.g. "PAY/2026/10/0001"
+  name: text('name').notNull(),
   paymentDate: text('payment_date').notNull(),
   amount: real('amount').notNull(),
-  paymentMethod: text('payment_method').notNull().default('cash'), // cash, bank_transfer, qris
+  paymentMethod: text('payment_method').notNull().default('cash'),
   reference: text('reference'),
-  state: text('state').notNull().default('posted'), // draft, posted, cancelled
+  state: text('state').notNull().default('posted'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+// --------------------------------------------------------------------------
+// Double-Entry Inventory & Asset Tracking (Odoo Model: Warehouses, Locations, Moves)
+// --------------------------------------------------------------------------
+export const warehouses = sqliteTable('warehouses', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // "Gudang Utama", "Lab IPA"
+  code: text('code').notNull(), // "WH", "LAB"
+  address: text('address'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+export const stockLocations = sqliteTable('stock_locations', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  warehouseId: text('warehouse_id').references(() => warehouses.id),
+  name: text('name').notNull(), // "Stock/Gudang", "Customer/Student", "Vendor", "Inventory Loss"
+  usage: text('usage').notNull(), // internal, customer, supplier, inventory
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+export const products = sqliteTable('products', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // "Seragam Batik SMA", "Buku Matematika 10", "Laptop Lab"
+  code: text('code').notNull().unique(), // "SRG-BTK", "BK-MAT10", "AST-LP01"
+  type: text('type').notNull().default('storable'), // storable, consumable, asset
+  uom: text('uom').notNull().default('pcs'), // pcs, set, unit
+  listPrice: real('list_price').default(0),
+  standardPrice: real('standard_price').default(0),
+  serialNumber: text('serial_number'), // for high-value equipment/assets
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const stockPickings = sqliteTable('stock_pickings', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // e.g. "WH/IN/0001", "WH/OUT/0001"
+  pickingType: text('picking_type').notNull(), // incoming, outgoing, internal
+  origin: text('origin'), // purchase order, student request
+  state: text('state').notNull().default('draft'), // draft, confirmed, done, cancel
+  scheduledDate: text('scheduled_date'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const stockMoves = sqliteTable('stock_moves', {
+  id: text('id').primaryKey(),
+  pickingId: text('picking_id').references(() => stockPickings.id, { onDelete: 'cascade' }),
+  productId: text('product_id').notNull().references(() => products.id),
+  locationId: text('location_id').notNull().references(() => stockLocations.id), // Source location
+  locationDestId: text('location_dest_id').notNull().references(() => stockLocations.id), // Destination location
+  productQty: real('product_qty').notNull(),
+  state: text('state').notNull().default('draft'), // draft, done, cancel
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
