@@ -1,22 +1,39 @@
 {
   "name": "erp-school",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "School ERP Monolith on Cloudflare Workers, D1, R2, and Better-Auth",
+  "main": "src/index.ts",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 execute erp-school-db --local",
+    "db:seed:local": "wrangler d1 execute erp-school-db --local --file=./src/db/seed.sql",
+    "db:migrate:remote": "wrangler d1 execute erp-school-db --remote",
+    "db:seed:remote": "wrangler d1 execute erp-school-db --remote --file=./src/db/seed.sql -y",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dittorahmat/erp-school.git"
   },
-  "keywords": [],
+  "keywords": [
+    "erp",
+    "school",
+    "odoo",
+    "openeducat",
+    "cloudflare-workers",
+    "d1",
+    "r2"
+  ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/dittorahmat/erp-school/issues"
   },
