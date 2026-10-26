@@ -387,21 +387,39 @@ export const odooShellHtml = `<!DOCTYPE html>
         var years = json.data || [];
 
         var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-          '<div class="p-3.5 border-b border-slate-200"><span class="font-semibold text-xs text-slate-700">Tahun Ajaran Aktif</span></div>' +
+          '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+            '<span class="font-semibold text-xs text-slate-700">Tahun Ajaran Aktif</span>' +
+            '<button onclick="navigate(\'academics\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+          '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
             '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
-              '<tr><th class="px-5 py-2.5">Nama Tahun Ajaran</th><th class="px-5 py-2.5">Kode</th><th class="px-5 py-2.5">Periode</th><th class="px-5 py-2.5">Status</th></tr>' +
+              '<tr>' +
+                '<th class="px-5 py-2.5">Nama Tahun Ajaran</th>' +
+                '<th class="px-5 py-2.5">Kode</th>' +
+                '<th class="px-5 py-2.5">Periode</th>' +
+                '<th class="px-5 py-2.5">Status</th>' +
+                '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+              '</tr>' +
             '</thead>' +
             '<tbody class="divide-y divide-slate-100">';
 
-        years.forEach(function(y) {
-          html += '<tr class="hover:bg-slate-50">' +
-            '<td class="px-5 py-3 font-bold text-slate-800">' + y.name + '</td>' +
-            '<td class="px-5 py-3 font-mono">' + y.code + '</td>' +
-            '<td class="px-5 py-3 text-slate-600">' + y.startDate + ' s/d ' + y.endDate + '</td>' +
-            '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">' + y.status + '</span></td>' +
-          '</tr>';
-        });
+        if (years.length === 0) {
+          html += '<tr><td colspan="5" class="text-center py-8 text-slate-400">Belum ada data tahun ajaran.</td></tr>';
+        } else {
+          years.forEach(function(y) {
+            var yearJson = JSON.stringify(y).replace(/"/g, '&quot;');
+            html += '<tr class="hover:bg-slate-50 transition">' +
+              '<td class="px-5 py-3 font-bold text-slate-800">' + y.name + '</td>' +
+              '<td class="px-5 py-3 font-mono">' + y.code + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + (y.startDate || '-') + ' s/d ' + (y.endDate || '-') + '</td>' +
+              '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold ' + (y.status === 'active' ? 'bg-emerald-100 text-emerald-800' : (y.status === 'closed' ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800')) + '">' + y.status + '</span></td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick=\'openEditAcademicYearModal(' + yearJson + ')\' class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteAcademicYear(\'' + y.id + '\', \'' + y.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
+            '</tr>';
+          });
+        }
 
         html += '</tbody></table></div>';
         document.getElementById('main-content').innerHTML = html;
@@ -527,6 +545,8 @@ export const odooShellHtml = `<!DOCTYPE html>
       var content = document.getElementById('modal-form-content');
       if (state.currentView === 'students') {
         content.innerHTML = renderStudentFormHtml({});
+      } else if (state.currentView === 'academics') {
+        content.innerHTML = renderAcademicYearFormHtml({});
       } else {
         content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Item / Dokumen</label><input id="form-name" type="text" placeholder="Nama..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none"></div>';
       }
@@ -539,6 +559,46 @@ export const odooShellHtml = `<!DOCTYPE html>
       var content = document.getElementById('modal-form-content');
       content.innerHTML = renderStudentFormHtml(student);
       document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openEditAcademicYearModal(year) {
+      document.getElementById('edit-record-id').value = year.id;
+      document.getElementById('modal-title').innerText = 'Edit Tahun Ajaran';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderAcademicYearFormHtml(year);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function renderAcademicYearFormHtml(y) {
+      var statusVal = y.status || 'active';
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Tahun Ajaran *</label>' +
+          '<input id="form-name" type="text" value="' + (y.name || '') + '" placeholder="e.g. 2026/2027" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Kode *</label>' +
+          '<input id="form-ay-code" type="text" value="' + (y.code || '') + '" placeholder="e.g. AY-2627" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Mulai *</label>' +
+            '<input id="form-start-date" type="date" value="' + (y.startDate || '') + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Selesai *</label>' +
+            '<input id="form-end-date" type="date" value="' + (y.endDate || '') + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Status</label>' +
+          '<select id="form-ay-status" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+            '<option value="draft"' + (statusVal === 'draft' ? ' selected' : '') + '>Draft</option>' +
+            '<option value="active"' + (statusVal === 'active' ? ' selected' : '') + '>Aktif (Active)</option>' +
+            '<option value="closed"' + (statusVal === 'closed' ? ' selected' : '') + '>Selesai (Closed)</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>';
     }
 
     function renderStudentFormHtml(s) {
@@ -657,6 +717,47 @@ export const odooShellHtml = `<!DOCTYPE html>
               throw new Error(errData.error || 'Gagal menambahkan siswa');
             }
           }
+        } else if (state.currentView === 'academics') {
+          var codeInput = document.getElementById('form-ay-code');
+          var startDateInput = document.getElementById('form-start-date');
+          var endDateInput = document.getElementById('form-end-date');
+          var statusInput = document.getElementById('form-ay-status');
+
+          var codeVal = codeInput && codeInput.value.trim() ? codeInput.value.trim() : ('AY-' + Math.floor(Math.random() * 90 + 10));
+          var startDateVal = startDateInput ? startDateInput.value : '';
+          var endDateVal = endDateInput ? endDateInput.value : '';
+          var statusVal = statusInput ? statusInput.value : 'active';
+
+          var ayPayload = {
+            schoolId: 'sch_smp_01',
+            name: nameVal,
+            code: codeVal,
+            startDate: startDateVal,
+            endDate: endDateVal,
+            status: statusVal
+          };
+
+          if (editId) {
+            var updateAyRes = await fetch('/api/academic/years/' + editId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(ayPayload)
+            });
+            if (!updateAyRes.ok) {
+              var errData = await updateAyRes.json();
+              throw new Error(errData.error || 'Gagal mengupdate tahun ajaran');
+            }
+          } else {
+            var createAyRes = await fetch('/api/academic/years', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(ayPayload)
+            });
+            if (!createAyRes.ok) {
+              var errData = await createAyRes.json();
+              throw new Error(errData.error || 'Gagal menambahkan tahun ajaran');
+            }
+          }
         } else if (state.currentView === 'inventory') {
           await fetch('/api/inventory/products', {
             method: 'POST',
@@ -686,6 +787,24 @@ export const odooShellHtml = `<!DOCTYPE html>
         renderStudents();
       } catch (err) {
         alert('Gagal menghapus siswa: ' + err.message);
+      }
+    }
+
+    async function deleteAcademicYear(yearId, yearName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus tahun ajaran "' + yearName + '"? Data yang dihapus tidak dapat dikembalikan.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/academic/years/' + yearId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus tahun ajaran');
+        }
+        renderAcademics();
+      } catch (err) {
+        alert('Gagal menghapus tahun ajaran: ' + err.message);
       }
     }
 
