@@ -450,19 +450,62 @@ export const odooShellHtml = `<!DOCTYPE html>
     }
 
     async function renderExams() {
-      var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
-        '<div class="p-3.5 border-b border-slate-200"><h3 class="font-bold text-slate-800 text-xs">Sesi Ujian Semester Ganjil 2025/2026</h3></div>' +
-        '<table class="w-full text-left text-xs text-slate-700">' +
-          '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
-            '<tr><th class="px-5 py-2.5">Nama Ujian</th><th class="px-5 py-2.5">Mata Pelajaran</th><th class="px-5 py-2.5">Tanggal Ujian</th><th class="px-5 py-2.5">Passing Marks (KKM)</th><th class="px-5 py-2.5">Status</th></tr>' +
-          '</thead>' +
-          '<tbody class="divide-y divide-slate-100">' +
-            '<tr class="hover:bg-slate-50"><td class="px-5 py-3 font-bold text-slate-800">UTS Semester Ganjil</td><td class="px-5 py-3">Matematika Wajib (MAT-10)</td><td class="px-5 py-3 text-slate-600">2026-10-15</td><td class="px-5 py-3 font-bold">75</td><td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">Published</span></td></tr>' +
-            '<tr class="hover:bg-slate-50"><td class="px-5 py-3 font-bold text-slate-800">Tugas Praktikum 1</td><td class="px-5 py-3">Fisika Dasar (FIS-10)</td><td class="px-5 py-3 text-slate-600">2026-10-20</td><td class="px-5 py-3 font-bold">75</td><td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">Published</span></td></tr>' +
-          '</tbody>' +
-        '</table>' +
-      '</div>';
-      document.getElementById('main-content').innerHTML = html;
+      try {
+        var res = await fetch('/api/exams/sessions');
+        var json = await res.json();
+        var data = json.data || [];
+
+        var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
+          '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
+            '<h3 class="font-bold text-slate-800 text-xs">Sesi Ujian Semester Ganjil 2025/2026</h3>' +
+            '<button onclick="navigate(\'exams\')" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
+          '</div>' +
+          '<table class="w-full text-left text-xs text-slate-700">' +
+            '<thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">' +
+              '<tr>' +
+                '<th class="px-5 py-2.5">Nama Ujian</th>' +
+                '<th class="px-5 py-2.5">Mata Pelajaran</th>' +
+                '<th class="px-5 py-2.5">Tanggal Ujian</th>' +
+                '<th class="px-5 py-2.5">Passing Marks (KKM)</th>' +
+                '<th class="px-5 py-2.5">Bobot</th>' +
+                '<th class="px-5 py-2.5">Status</th>' +
+                '<th class="px-5 py-2.5 text-right">Aksi</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody class="divide-y divide-slate-100">';
+
+        if (data.length === 0) {
+          html += '<tr><td colspan="7" class="text-center py-8 text-slate-400">Belum ada sesi ujian. Klik tombol Buat Data untuk menambahkan.</td></tr>';
+        } else {
+          data.forEach(function(exam) {
+            var examJson = JSON.stringify(exam).replace(/"/g, '&quot;');
+            var isPublished = exam.status === 'published';
+            var statusBadge = isPublished
+              ? '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">Published</span>'
+              : (exam.status === 'closed'
+                ? '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">Closed</span>'
+                : '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800">Draft</span>');
+
+            html += '<tr class="hover:bg-slate-50 transition">' +
+              '<td class="px-5 py-3 font-bold text-slate-800">' + exam.name + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + (exam.subjectId || 'Umum') + '</td>' +
+              '<td class="px-5 py-3 text-slate-600">' + (exam.examDate || '-') + '</td>' +
+              '<td class="px-5 py-3 font-bold">' + (exam.passingMarks || 75) + '</td>' +
+              '<td class="px-5 py-3">' + (exam.weightage || 30) + '%</td>' +
+              '<td class="px-5 py-3">' + statusBadge + '</td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick=\'openEditExamModal(' + examJson + ')\' class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteExamSession(\'' + exam.id + '\', \'' + exam.name.replace(/'/g, "\\'") + '\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
+            '</tr>';
+          });
+        }
+
+        html += '</tbody></table></div>';
+        document.getElementById('main-content').innerHTML = html;
+      } catch (err) {
+        document.getElementById('main-content').innerHTML = '<div class="p-6 bg-rose-50 text-rose-700 rounded">Error: ' + err.message + '</div>';
+      }
     }
 
     async function renderFinance() {
@@ -586,6 +629,8 @@ export const odooShellHtml = `<!DOCTYPE html>
         content.innerHTML = renderStudentFormHtml({});
       } else if (state.currentView === 'academics') {
         content.innerHTML = renderAcademicYearFormHtml({});
+      } else if (state.currentView === 'exams') {
+        content.innerHTML = renderExamFormHtml({});
       } else if (state.currentView === 'inventory') {
         content.innerHTML = renderProductFormHtml({});
       } else if (state.currentView === 'finance') {
@@ -612,12 +657,59 @@ export const odooShellHtml = `<!DOCTYPE html>
       document.getElementById('create-modal').classList.remove('hidden');
     }
 
+    function openEditExamModal(exam) {
+      document.getElementById('edit-record-id').value = exam.id;
+      document.getElementById('modal-title').innerText = 'Edit Sesi Ujian';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderExamFormHtml(exam);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
     function openEditProductModal(product) {
       document.getElementById('edit-record-id').value = product.id;
       document.getElementById('modal-title').innerText = 'Edit Produk / Aset';
       var content = document.getElementById('modal-form-content');
       content.innerHTML = renderProductFormHtml(product);
       document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function renderExamFormHtml(e) {
+      var statusVal = e.status || 'draft';
+      var today = new Date().toISOString().split('T')[0];
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Ujian *</label>' +
+          '<input id="form-name" type="text" value="' + (e.name || '') + '" placeholder="e.g. UTS Matematika Wajib" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Mata Pelajaran *</label>' +
+            '<input id="form-exam-subject" type="text" value="' + (e.subjectId || 'MAT-10') + '" placeholder="e.g. MAT-10" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Ujian *</label>' +
+            '<input id="form-exam-date" type="date" value="' + (e.examDate || today) + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Passing Marks / KKM *</label>' +
+            '<input id="form-exam-passing" type="number" value="' + (e.passingMarks !== undefined ? e.passingMarks : 75) + '" placeholder="75" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Bobot Penilaian (%) *</label>' +
+            '<input id="form-exam-weight" type="number" value="' + (e.weightage !== undefined ? e.weightage : 30) + '" placeholder="30" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Status</label>' +
+          '<select id="form-exam-status" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+            '<option value="draft"' + (statusVal === 'draft' ? ' selected' : '') + '>Draft</option>' +
+            '<option value="published"' + (statusVal === 'published' ? ' selected' : '') + '>Published</option>' +
+            '<option value="closed"' + (statusVal === 'closed' ? ' selected' : '') + '>Closed</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>';
     }
 
     function renderInvoiceFormHtml(inv) {
@@ -889,6 +981,54 @@ export const odooShellHtml = `<!DOCTYPE html>
               throw new Error(errData.error || 'Gagal menambahkan tahun ajaran');
             }
           }
+        } else if (state.currentView === 'exams') {
+          var subjectInput = document.getElementById('form-exam-subject');
+          var examDateInput = document.getElementById('form-exam-date');
+          var passingInput = document.getElementById('form-exam-passing');
+          var weightInput = document.getElementById('form-exam-weight');
+          var statusExamInput = document.getElementById('form-exam-status');
+
+          var subjectVal = subjectInput && subjectInput.value.trim() ? subjectInput.value.trim() : 'MAT-10';
+          var examDateVal = examDateInput ? examDateInput.value : new Date().toISOString().split('T')[0];
+          var passingVal = passingInput ? Number(passingInput.value) : 75;
+          var weightVal = weightInput ? Number(weightInput.value) : 30;
+          var statusExamVal = statusExamInput ? statusExamInput.value : 'draft';
+
+          var examPayload = {
+            schoolId: 'sch_smp_01',
+            academicYearId: 'ay_2025_ganjil',
+            termId: 'term_01',
+            classroomId: 'cls_x_mipa_1',
+            subjectId: subjectVal,
+            name: nameVal,
+            examDate: examDateVal,
+            totalMarks: 100,
+            passingMarks: passingVal,
+            weightage: weightVal,
+            status: statusExamVal
+          };
+
+          if (editId) {
+            var updateExamRes = await fetch('/api/exams/sessions/' + editId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(examPayload)
+            });
+            if (!updateExamRes.ok) {
+              var errExamData = await updateExamRes.json();
+              throw new Error(errExamData.error || 'Gagal mengupdate sesi ujian');
+            }
+          } else {
+            var createExamRes = await fetch('/api/exams/sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(examPayload)
+            });
+            if (!createExamRes.ok) {
+              var errExamData = await createExamRes.json();
+              throw new Error(errExamData.error || 'Gagal membuat sesi ujian');
+            }
+          }
         } else if (state.currentView === 'inventory') {
           var prodCodeInput = document.getElementById('form-prod-code');
           var prodTypeInput = document.getElementById('form-prod-type');
@@ -1008,6 +1148,24 @@ export const odooShellHtml = `<!DOCTYPE html>
         renderAcademics();
       } catch (err) {
         alert('Gagal menghapus tahun ajaran: ' + err.message);
+      }
+    }
+
+    async function deleteExamSession(sessionId, sessionName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus sesi ujian "' + sessionName + '"? Seluruh nilai terkait akan dihapus secara atomik.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/exams/sessions/' + sessionId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus sesi ujian');
+        }
+        renderExams();
+      } catch (err) {
+        alert('Gagal menghapus sesi ujian: ' + err.message);
       }
     }
 
