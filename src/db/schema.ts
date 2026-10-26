@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 
 // --------------------------------------------------------------------------
 // Better-Auth Tables (Standard SQLite Schema)
@@ -240,4 +240,35 @@ export const attendanceLines = sqliteTable('attendance_lines', {
   status: text('status').notNull().default('present'), // present, absent, sick, excused, late
   remark: text('remark'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+// --------------------------------------------------------------------------
+// Examination & Grading
+// --------------------------------------------------------------------------
+export const examSessions = sqliteTable('exam_sessions', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  academicYearId: text('academic_year_id').notNull().references(() => academicYears.id),
+  termId: text('term_id').notNull().references(() => terms.id),
+  classroomId: text('classroom_id').notNull().references(() => classrooms.id),
+  subjectId: text('subject_id').notNull().references(() => subjects.id),
+  name: text('name').notNull(), // "UTS Semester Ganjil Matematika"
+  examDate: text('exam_date').notNull(),
+  totalMarks: integer('total_marks').default(100),
+  passingMarks: integer('passing_marks').default(75), // KKM
+  weightage: integer('weightage').default(30), // 30% of final grade
+  status: text('status').notNull().default('draft'), // draft, in_progress, finished, published
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const examMarks = sqliteTable('exam_marks', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id').notNull().references(() => examSessions.id, { onDelete: 'cascade' }),
+  studentId: text('student_id').notNull().references(() => students.id),
+  marksObtained: real('marks_obtained').notNull(),
+  grade: text('grade'), // A, B, C, D
+  remark: text('remark'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
