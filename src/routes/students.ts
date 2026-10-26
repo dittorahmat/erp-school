@@ -10,10 +10,35 @@ studentRouter.get("/", async (c) => {
   return c.json({ data: studentsList });
 });
 
+studentRouter.get("/:id", async (c) => {
+  const id = c.req.param("id");
+  const student = await studentManagement.getStudentById(c.env.DB, id);
+  if (!student) {
+    return c.json({ error: "Student not found" }, 404);
+  }
+  return c.json({ success: true, data: student });
+});
+
 studentRouter.post("/", async (c) => {
   const body = await c.req.json();
   const newStudent = await studentManagement.createStudent(c.env.DB, body);
   return c.json({ success: true, data: newStudent }, 201);
+});
+
+studentRouter.put("/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const updatedStudent = await studentManagement.updateStudent(c.env.DB, id, body);
+  if (!updatedStudent) {
+    return c.json({ error: "Student not found" }, 404);
+  }
+  return c.json({ success: true, data: updatedStudent });
+});
+
+studentRouter.delete("/:id", async (c) => {
+  const id = c.req.param("id");
+  const result = await studentManagement.deleteStudent(c.env.DB, id);
+  return c.json({ success: true, data: result });
 });
 
 // Cloudflare R2 Direct Upload for Student Avatars & Documents

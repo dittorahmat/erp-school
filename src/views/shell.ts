@@ -152,13 +152,14 @@ export const odooShellHtml = `<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Create Record Modal -->
+  <!-- Create / Edit Record Modal -->
   <div id="create-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
         <h3 class="font-bold text-slate-800 text-base" id="modal-title">Tambah Data</h3>
         <button onclick="closeCreateModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-base"></i></button>
       </div>
+      <input type="hidden" id="edit-record-id" value="">
       <div id="modal-form-content" class="space-y-4 text-xs">
       </div>
       <div class="flex items-center justify-end space-x-2 mt-6 pt-4 border-t border-slate-100">
@@ -354,6 +355,7 @@ export const odooShellHtml = `<!DOCTYPE html>
           html += '<tr><td colspan="5" class="text-center py-8 text-slate-400">Belum ada data siswa.</td></tr>';
         } else {
           data.forEach(function(s) {
+            var studentJson = JSON.stringify(s).replace(/"/g, '&quot;');
             html += '<tr class="hover:bg-slate-50 transition">' +
               '<td class="px-5 py-3 flex items-center gap-3">' +
                 '<img src="' + (s.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100') + '" class="w-7 h-7 rounded-full object-cover border" alt="Avatar">' +
@@ -362,7 +364,11 @@ export const odooShellHtml = `<!DOCTYPE html>
               '<td class="px-5 py-3 font-mono">' + s.nis + ' / ' + s.nisn + '</td>' +
               '<td class="px-5 py-3 capitalize">' + s.gender + '</td>' +
               '<td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">' + s.status + '</span></td>' +
-              '<td class="px-5 py-3 text-right"><button onclick="viewReportCard(\\'' + s.id + '\\')" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1 rounded transition font-medium">Lihat Rapor</button></td>' +
+              '<td class="px-5 py-3 text-right space-x-1.5">' +
+                '<button onclick="viewReportCard(\\'' + s.id + '\\')" class="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1 rounded transition font-medium">Rapor</button>' +
+                '<button onclick=\\'openEditStudentModal(' + studentJson + ')\\' class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded transition font-medium">Edit</button>' +
+                '<button onclick="deleteStudent(\\'' + s.id + '\\', \\'' + s.name.replace(/'/g, "\\\\'") + '\\')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded transition font-medium">Hapus</button>' +
+              '</td>' +
             '</tr>';
           });
         }
@@ -516,34 +522,141 @@ export const odooShellHtml = `<!DOCTYPE html>
     }
 
     function openCreateModal() {
+      document.getElementById('edit-record-id').value = '';
       document.getElementById('modal-title').innerText = 'Tambah Data ' + state.currentView;
       var content = document.getElementById('modal-form-content');
       if (state.currentView === 'students') {
-        content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Lengkap</label><input id="form-name" type="text" placeholder="Nama Siswa..." class="w-full text-xs p-2 border rounded"></div>' +
-          '<div><label class="block font-semibold text-slate-700 mb-1">NIS / NISN</label><input id="form-nis" type="text" placeholder="202601..." class="w-full text-xs p-2 border rounded"></div>';
+        content.innerHTML = renderStudentFormHtml({});
       } else {
-        content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Item / Dokumen</label><input id="form-name" type="text" placeholder="Nama..." class="w-full text-xs p-2 border rounded"></div>';
+        content.innerHTML = '<div><label class="block font-semibold text-slate-700 mb-1">Nama Item / Dokumen</label><input id="form-name" type="text" placeholder="Nama..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none"></div>';
       }
       document.getElementById('create-modal').classList.remove('hidden');
     }
 
+    function openEditStudentModal(student) {
+      document.getElementById('edit-record-id').value = student.id;
+      document.getElementById('modal-title').innerText = 'Edit Data Siswa';
+      var content = document.getElementById('modal-form-content');
+      content.innerHTML = renderStudentFormHtml(student);
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function renderStudentFormHtml(s) {
+      var genderVal = s.gender || 'male';
+      var statusVal = s.status || 'active';
+      return '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Nama Lengkap *</label>' +
+          '<input id="form-name" type="text" value="' + (s.name || '') + '" placeholder="Nama Siswa..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">NIS *</label>' +
+            '<input id="form-nis" type="text" value="' + (s.nis || '') + '" placeholder="e.g. 20260101" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">NISN *</label>' +
+            '<input id="form-nisn" type="text" value="' + (s.nisn || '') + '" placeholder="e.g. 0012345678" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Jenis Kelamin</label>' +
+            '<select id="form-gender" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="male"' + (genderVal === 'male' ? ' selected' : '') + '>Laki-laki (Male)</option>' +
+              '<option value="female"' + (genderVal === 'female' ? ' selected' : '') + '>Perempuan (Female)</option>' +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Status</label>' +
+            '<select id="form-status" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none bg-white">' +
+              '<option value="active"' + (statusVal === 'active' ? ' selected' : '') + '>Aktif (Active)</option>' +
+              '<option value="graduated"' + (statusVal === 'graduated' ? ' selected' : '') + '>Lulus (Graduated)</option>' +
+              '<option value="transferred"' + (statusVal === 'transferred' ? ' selected' : '') + '>Pindah (Transferred)</option>' +
+              '<option value="inactive"' + (statusVal === 'inactive' ? ' selected' : '') + '>Nonaktif (Inactive)</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tempat Lahir</label>' +
+            '<input id="form-birth-place" type="text" value="' + (s.birthPlace || '') + '" placeholder="e.g. Jakarta" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+          '<div>' +
+            '<label class="block font-semibold text-slate-700 mb-1">Tanggal Lahir</label>' +
+            '<input id="form-birth-date" type="date" value="' + (s.birthDate || '') + '" class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block font-semibold text-slate-700 mb-1">Alamat Tinggal</label>' +
+          '<textarea id="form-address" rows="2" placeholder="Alamat lengkap..." class="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none">' + (s.address || '') + '</textarea>' +
+        '</div>' +
+      '</div>';
+    }
+
     function closeCreateModal() {
       document.getElementById('create-modal').classList.add('hidden');
+      document.getElementById('edit-record-id').value = '';
     }
 
     async function saveModalRecord() {
       var nameInput = document.getElementById('form-name');
-      var nisInput = document.getElementById('form-nis');
       var nameVal = nameInput ? nameInput.value.trim() : '';
       if (!nameVal) { alert('Nama wajib diisi.'); return; }
+
+      var editId = document.getElementById('edit-record-id').value;
+
       try {
         if (state.currentView === 'students') {
+          var nisInput = document.getElementById('form-nis');
+          var nisnInput = document.getElementById('form-nisn');
+          var genderInput = document.getElementById('form-gender');
+          var statusInput = document.getElementById('form-status');
+          var birthPlaceInput = document.getElementById('form-birth-place');
+          var birthDateInput = document.getElementById('form-birth-date');
+          var addressInput = document.getElementById('form-address');
+
           var nisVal = nisInput && nisInput.value.trim() ? nisInput.value.trim() : ('2026' + Math.floor(Math.random() * 9000 + 1000));
-          await fetch('/api/students', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ schoolId: 'sch_smp_01', name: nameVal, nis: nisVal, nisn: nisVal + '0', status: 'active' })
-          });
+          var nisnVal = nisnInput && nisnInput.value.trim() ? nisnInput.value.trim() : (nisVal + '0');
+          var genderVal = genderInput ? genderInput.value : 'male';
+          var statusVal = statusInput ? statusInput.value : 'active';
+          var birthPlaceVal = birthPlaceInput ? birthPlaceInput.value.trim() : '';
+          var birthDateVal = birthDateInput ? birthDateInput.value : '';
+          var addressVal = addressInput ? addressInput.value.trim() : '';
+
+          var payload = {
+            schoolId: 'sch_smp_01',
+            name: nameVal,
+            nis: nisVal,
+            nisn: nisnVal,
+            gender: genderVal,
+            status: statusVal,
+            birthPlace: birthPlaceVal,
+            birthDate: birthDateVal,
+            address: addressVal
+          };
+
+          if (editId) {
+            var updateRes = await fetch('/api/students/' + editId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!updateRes.ok) {
+              var errData = await updateRes.json();
+              throw new Error(errData.error || 'Gagal mengupdate siswa');
+            }
+          } else {
+            var createRes = await fetch('/api/students', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!createRes.ok) {
+              var errData = await createRes.json();
+              throw new Error(errData.error || 'Gagal menambahkan siswa');
+            }
+          }
         } else if (state.currentView === 'inventory') {
           await fetch('/api/inventory/products', {
             method: 'POST',
@@ -555,6 +668,24 @@ export const odooShellHtml = `<!DOCTYPE html>
         navigate(state.currentView);
       } catch (err) {
         alert('Gagal menyimpan ke D1: ' + err.message);
+      }
+    }
+
+    async function deleteStudent(studentId, studentName) {
+      if (!confirm('Apakah Anda yakin ingin menghapus siswa "' + studentName + '"? Data yang dihapus tidak dapat dikembalikan.')) {
+        return;
+      }
+      try {
+        var res = await fetch('/api/students/' + studentId, {
+          method: 'DELETE'
+        });
+        if (!res.ok) {
+          var errData = await res.json();
+          throw new Error(errData.error || 'Gagal menghapus siswa');
+        }
+        renderStudents();
+      } catch (err) {
+        alert('Gagal menghapus siswa: ' + err.message);
       }
     }
 
