@@ -65,3 +65,62 @@ export const schools = sqliteTable('schools', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
+
+// Academic Year (e.g. 2025/2026)
+export const academicYears = sqliteTable('academic_years', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // "2025/2026"
+  code: text('code').notNull(), // "AY-2526"
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date').notNull(),
+  status: text('status').notNull().default('active'), // draft, active, closed
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+// Academic Term / Semester
+export const terms = sqliteTable('terms', {
+  id: text('id').primaryKey(),
+  academicYearId: text('academic_year_id').notNull().references(() => academicYears.id),
+  name: text('name').notNull(), // "Semester Ganjil", "Semester Genap"
+  code: text('code').notNull(),
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date').notNull(),
+  status: text('status').notNull().default('active'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+// Grade Level (e.g. "Kelas 10", "Kelas 11", "Kelas 12")
+export const gradeLevels = sqliteTable('grade_levels', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(),
+  sequence: integer('sequence').notNull().default(10),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+// Course / Program (e.g. "MIPA", "IPS", "Bahasa")
+export const courses = sqliteTable('courses', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(),
+  code: text('code').notNull(),
+  evaluationType: text('evaluation_type').default('normal'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+// Subject / Mata Pelajaran
+export const subjects = sqliteTable('subjects', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(),
+  code: text('code').notNull(), // "MAT-10"
+  type: text('type').default('compulsory'), // compulsory, elective
+  weightage: integer('weightage').default(100),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});

@@ -8,6 +8,13 @@
       "when": 1793015438275,
       "tag": "0000_overjoyed_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793015643642,
+      "tag": "0001_daffy_jackpot",
+      "breakpoints": true
     }
   ]
 }

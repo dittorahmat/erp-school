@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createAuth } from "./auth";
+import { academicRouter } from "./routes/academic";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./db/schema";
 import { eq } from "drizzle-orm";
@@ -15,6 +16,9 @@ export type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>();
 
 app.use("*", cors());
+
+// Academic Routes
+app.route("/api/academic", academicRouter);
 
 // Healthcheck
 app.get("/api/health", (c) => {
