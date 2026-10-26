@@ -17,6 +17,14 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
 ### Coding standards & Quality Guardrails
 
 - Coding standards: see `CODING_STANDARDS.md`.
+- **Wajib Audit Anti-AI-Slop via `design-taste-frontend`**:
+  - **MANDAT KETAT**: Setiap penambahan, pembaruan, atau refactoring komponen dan antarmuka frontend (`src/views/`, layout HTML, styling CSS) **WAJIB diaudit menggunakan skill `design-taste-frontend`** (`node <skill>/scripts/inspect.mjs --app <url>`).
+  - Dilarang keras membiarkan pola AI-slop template generik:
+    - Banned: Ikon di dalam kotak/lingkaran berwarna-warni (*tinted icon chips*).
+    - Banned: Gradien neon berlebihan, glow artifisial, dan angka vanity tanpa arti data.
+    - Banned: Horizontal scroll/overflow di berbagai ukuran layar (desktop 1440px, tablet 768px, mobile 390px).
+    - Banned: Teks kontras rendah (harus memenuhi standar rasio kontras WCAG >= 4.5:1).
+  - Setiap perubahan UI harus lulus audit meter dengan status **0 FAIL**.
 - **Wajib UI Fungsional Nyata (Anti-Mockup Statis)**:
   - DILARANG menyajikan HTML statis dengan dummy hardcoded data di deployment akhir.
   - Setiap view / tab / menu WAJIB terhubung secara dinamis via API (`fetch('/api/...')`) ke database Cloudflare D1.
