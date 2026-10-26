@@ -200,3 +200,44 @@ export const enrollments = sqliteTable('enrollments', {
   status: text('status').notNull().default('active'), // active, completed, dropped
   enrolledAt: integer('enrolled_at', { mode: 'timestamp' }).notNull()
 });
+
+// --------------------------------------------------------------------------
+// Timetable & Attendance
+// --------------------------------------------------------------------------
+export const timetables = sqliteTable('timetables', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  classroomId: text('classroom_id').notNull().references(() => classrooms.id),
+  subjectId: text('subject_id').notNull().references(() => subjects.id),
+  facultyId: text('faculty_id').notNull().references(() => faculties.id),
+  dayOfWeek: text('day_of_week').notNull(), // monday, tuesday, wednesday, thursday, friday, saturday
+  startTime: text('start_time').notNull(), // "07:30"
+  endTime: text('end_time').notNull(), // "09:00"
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const attendanceSheets = sqliteTable('attendance_sheets', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  classroomId: text('classroom_id').notNull().references(() => classrooms.id),
+  facultyId: text('faculty_id').notNull().references(() => faculties.id),
+  timetableId: text('timetable_id').references(() => timetables.id),
+  date: text('date').notNull(), // "2026-10-26"
+  status: text('status').notNull().default('draft'), // draft, confirmed
+  totalPresent: integer('total_present').default(0),
+  totalAbsent: integer('total_absent').default(0),
+  totalSick: integer('total_sick').default(0),
+  totalExcused: integer('total_excused').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const attendanceLines = sqliteTable('attendance_lines', {
+  id: text('id').primaryKey(),
+  sheetId: text('sheet_id').notNull().references(() => attendanceSheets.id, { onDelete: 'cascade' }),
+  studentId: text('student_id').notNull().references(() => students.id),
+  status: text('status').notNull().default('present'), // present, absent, sick, excused, late
+  remark: text('remark'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});

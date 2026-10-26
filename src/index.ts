@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { createAuth } from "./auth";
 import { academicRouter } from "./routes/academic";
 import { studentRouter } from "./routes/students";
+import { attendanceRouter } from "./routes/attendance";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./db/schema";
 import { eq } from "drizzle-orm";
@@ -21,6 +22,7 @@ app.use("*", cors());
 // Routes
 app.route("/api/academic", academicRouter);
 app.route("/api/students", studentRouter);
+app.route("/api/attendance", attendanceRouter);
 
 // Healthcheck
 app.get("/api/health", (c) => {
