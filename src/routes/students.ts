@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import type { Bindings } from "../index";
+import { generateId } from "../lib/utils";
 
 export const studentRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -19,7 +20,7 @@ studentRouter.post("/", async (c) => {
   const body = await c.req.json();
   const db = drizzle(c.env.DB, { schema });
   const newStudent = {
-    id: body.id || `std_${Date.now()}`,
+    id: body.id || generateId("std"),
     schoolId: body.schoolId,
     guardianId: body.guardianId || null,
     nis: body.nis,

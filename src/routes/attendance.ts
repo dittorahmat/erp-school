@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import type { Bindings } from "../index";
+import { generateId } from "../lib/utils";
 
 export const attendanceRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -19,7 +20,7 @@ attendanceRouter.post("/timetables", async (c) => {
   const body = await c.req.json();
   const db = drizzle(c.env.DB, { schema });
   const newEntry = {
-    id: body.id || `tt_${Date.now()}`,
+    id: body.id || generateId("tt"),
     schoolId: body.schoolId,
     classroomId: body.classroomId,
     subjectId: body.subjectId,
@@ -46,7 +47,7 @@ attendanceRouter.get("/sheets", async (c) => {
 attendanceRouter.post("/sheets", async (c) => {
   const body = await c.req.json();
   const db = drizzle(c.env.DB, { schema });
-  const sheetId = body.id || `att_${Date.now()}`;
+  const sheetId = body.id || generateId("att");
 
   const newSheet = {
     id: sheetId,
@@ -64,19 +65,21 @@ attendanceRouter.post("/sheets", async (c) => {
     updatedAt: new Date()
   };
 
-  await db.insert(schema.attendanceSheets).values(newSheet);
+  const statements: any[] = [db.insert(schema.attendanceSheets).values(newSheet)];
 
-  if (body.lines && Array.isArray(body.lines)) {
+  if (body.lines && Array.isArray(body.lines) && body.lines.length > 0) {
     const linesToInsert = body.lines.map((l: any) => ({
-      id: `line_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateId("line"),
       sheetId: sheetId,
       studentId: l.studentId,
       status: l.status || "present",
       remark: l.remark || null,
       createdAt: new Date()
     }));
-    await db.insert(schema.attendanceLines).values(linesToInsert);
+    statements.push(db.insert(schema.attendanceLines).values(linesToInsert));
   }
+
+  await db.batch(statements as [any, ...any[]]);
 
   return c.json({ success: true, data: newSheet }, 201);
 });

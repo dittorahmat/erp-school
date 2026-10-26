@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import type { Bindings } from "../index";
+import { generateId } from "../lib/utils";
 
 export const inventoryRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -19,7 +20,7 @@ inventoryRouter.post("/products", async (c) => {
   const body = await c.req.json();
   const db = drizzle(c.env.DB, { schema });
   const newProduct = {
-    id: body.id || `prod_${Date.now()}`,
+    id: body.id || generateId("prod"),
     schoolId: body.schoolId,
     name: body.name,
     code: body.code,
@@ -48,7 +49,7 @@ inventoryRouter.get("/pickings", async (c) => {
 inventoryRouter.post("/pickings", async (c) => {
   const body = await c.req.json();
   const db = drizzle(c.env.DB, { schema });
-  const pickingId = body.id || `pick_${Date.now()}`;
+  const pickingId = body.id || generateId("pick");
 
   const newPicking = {
     id: pickingId,
@@ -62,11 +63,11 @@ inventoryRouter.post("/pickings", async (c) => {
     updatedAt: new Date()
   };
 
-  await db.insert(schema.stockPickings).values(newPicking);
+  const statements: any[] = [db.insert(schema.stockPickings).values(newPicking)];
 
-  if (body.moves && Array.isArray(body.moves)) {
+  if (body.moves && Array.isArray(body.moves) && body.moves.length > 0) {
     const movesToInsert = body.moves.map((m: any) => ({
-      id: `sm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: generateId("sm"),
       pickingId: pickingId,
       productId: m.productId,
       locationId: m.locationId, // source
@@ -75,8 +76,10 @@ inventoryRouter.post("/pickings", async (c) => {
       state: "done",
       createdAt: new Date()
     }));
-    await db.insert(schema.stockMoves).values(movesToInsert);
+    statements.push(db.insert(schema.stockMoves).values(movesToInsert));
   }
+
+  await db.batch(statements as [any, ...any[]]);
 
   return c.json({ success: true, data: newPicking }, 201);
 });

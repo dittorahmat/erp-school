@@ -17,6 +17,10 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
 ### Coding standards & Quality Guardrails
 
 - Coding standards: see `CODING_STANDARDS.md`.
+- **Prinsip Utama Rekayasa Kode (YAGNI & One-Liners)**:
+  - **MANDAT KETAT**: Implement YAGNI, prefer one liner solutions. Hindari over-engineering, abstraksi berlebihan yang belum diperlukan, dan duplikasi kode antar modul. Gunakan utilitas satu baris terpusat (seperti di `src/lib/utils.ts`).
+- **Cloudflare D1 Multi-Statement Operations (Atomic Batching)**:
+  - Setiap operasi penulisan relasional header + items/lines (misalnya invoice header + move lines, presensi sheet + attendance lines, stock picking + stock moves) **WAJIB menggunakan `await db.batch([...])`** dalam satu roundtrip ke D1, dilarang melakukan multiple inserts berurutan secara terpisah.
 - **Wajib Audit Anti-AI-Slop via `design-taste-frontend`**:
   - **MANDAT KETAT**: Setiap penambahan, pembaruan, atau refactoring komponen dan antarmuka frontend (`src/views/`, layout HTML, styling CSS) **WAJIB diaudit menggunakan skill `design-taste-frontend`** (`node <skill>/scripts/inspect.mjs --app <url>`).
   - Dilarang keras membiarkan pola AI-slop template generik:
@@ -28,6 +32,7 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
 - **Wajib UI Fungsional Nyata (Anti-Mockup Statis)**:
   - DILARANG menyajikan HTML statis dengan dummy hardcoded data di deployment akhir.
   - Setiap view / tab / menu WAJIB terhubung secara dinamis via API (`fetch('/api/...')`) ke database Cloudflare D1.
+  - Setiap modal atau form create WAJIB melakukan `fetch('/api/...', { method: 'POST' })` nyata untuk persistensi data ke D1.
   - Setiap menu navigasi, tombol buat baru, filter, aksi baris tabel, dan avatar profil WAJIB memiliki event handler interaktif yang berfungsi (termasuk fitur logout dan switch account).
 - **Arsitektur Pemisahan Kode UI**:
   - Dilarang menumpuk ribuan baris HTML/JS interaktif di dalam template literal file server (`src/index.ts`).

@@ -531,10 +531,31 @@ export const odooShellHtml = `<!DOCTYPE html>
       document.getElementById('create-modal').classList.add('hidden');
     }
 
-    function saveModalRecord() {
-      alert('Data tersimpan secara lokal dan tersinkronisasi ke Cloudflare D1.');
-      closeCreateModal();
-      navigate(state.currentView);
+    async function saveModalRecord() {
+      var nameInput = document.getElementById('form-name');
+      var nisInput = document.getElementById('form-nis');
+      var nameVal = nameInput ? nameInput.value.trim() : '';
+      if (!nameVal) { alert('Nama wajib diisi.'); return; }
+      try {
+        if (state.currentView === 'students') {
+          var nisVal = nisInput && nisInput.value.trim() ? nisInput.value.trim() : ('2026' + Math.floor(Math.random() * 9000 + 1000));
+          await fetch('/api/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schoolId: 'sch_smp_01', name: nameVal, nis: nisVal, nisn: nisVal + '0', status: 'active' })
+          });
+        } else if (state.currentView === 'inventory') {
+          await fetch('/api/inventory/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schoolId: 'sch_smp_01', name: nameVal, code: 'PRD-' + Math.floor(Math.random() * 900 + 100), standardPrice: 50000, type: 'storable' })
+          });
+        }
+        closeCreateModal();
+        navigate(state.currentView);
+      } catch (err) {
+        alert('Gagal menyimpan ke D1: ' + err.message);
+      }
     }
 
     function viewReportCard(studentId) {

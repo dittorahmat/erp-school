@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { eq, desc } from "drizzle-orm";
 import type { Bindings } from "../index";
+import { generateId, calculateGrade } from "../lib/utils";
 
 export const examRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -19,7 +20,7 @@ examRouter.post("/sessions", async (c) => {
   const body = await c.req.json();
   const db = drizzle(c.env.DB, { schema });
   const newSession = {
-    id: body.id || `exam_${Date.now()}`,
+    id: body.id || generateId("exam"),
     schoolId: body.schoolId,
     academicYearId: body.academicYearId,
     termId: body.termId,
@@ -45,15 +46,8 @@ examRouter.post("/marks", async (c) => {
   const body = await c.req.json();
   const db = drizzle(c.env.DB, { schema });
 
-  const calculateGrade = (marks: number, passing: number) => {
-    if (marks >= 90) return "A";
-    if (marks >= 80) return "B";
-    if (marks >= passing) return "C";
-    return "D";
-  };
-
   const newMark = {
-    id: body.id || `mark_${Date.now()}`,
+    id: body.id || generateId("mark"),
     sessionId: body.sessionId,
     studentId: body.studentId,
     marksObtained: body.marksObtained,
