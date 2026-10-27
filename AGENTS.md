@@ -58,3 +58,7 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Seluruh metode operasi create/update di domain module (`src/domain/*`) WAJIB memiliki parameter interface bertipe kuat (strongly typed), dilarang menggunakan `body: any` atau `data: any`. Gunakan utilitas compacting (`compactDefined`) untuk pembaruan parsial yang bersih tanpa boilerplate `if (x !== undefined)`.
 - **Dual-Entity Modules View Completeness**:
   - View yang mengelola master entitas berpasangan atau berkorelasi kuat (seperti Modul Akademik: Tahun Ajaran + Mata Pelajaran / Kurikulum) WAJIB menyediakan antarmuka manajemen UI lengkap untuk kedua entitas tersebut, bukan hanya salah satunya.
+- **Client-Side Domain Isolation & Data Fetching Completeness**:
+  - **MANDAT KETAT**: Dilarang keras meng-generate format sekuensial penomoran dokumen akuntansi/inventaris (seperti `INV/YYYY/...`), ID akun general ledger, atau ID jurnal secara acak di sisi frontend client. Biarkan domain backend yang menentukan fallback dan sequence generation secara sentral.
+  - Sourcing tenant ID wajib dinamis dari profil aktif pengguna (`currentUser.schoolId`), dilarang menaruh string hardcoded tenant di payload transaksi client.
+  - Setiap modal yang membutuhkan relasi ke entitas lain (misal modal Finance butuh daftar Siswa) WAJIB memastikan dataset entitas tersebut di-fetch pada siklus `fetchData()` view tersebut, lengkap dengan placeholder default `<option value="" disabled>-- Pilih Entitas --</option>`.

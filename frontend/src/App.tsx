@@ -79,7 +79,7 @@ export default function App() {
     if (!currentUser) return;
     setLoading(true);
     try {
-      if (currentView === 'students' || currentView === 'dashboard' || currentView === 'attendance' || currentView === 'exams') {
+      if (currentView === 'students' || currentView === 'dashboard' || currentView === 'attendance' || currentView === 'exams' || currentView === 'finance') {
         const res = await fetch('/api/students');
         const json = await res.json();
         setStudents(json.data || []);
@@ -343,17 +343,12 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            schoolId: 'school_sma_hb',
-            journalId: 'jrn_sale',
+            schoolId: currentUser.schoolId,
             studentId,
-            partnerId: studentId,
-            name: `INV/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${Math.floor(1000 + Math.random() * 9000)}`,
             date,
             dueDate,
             description,
-            amountTotal,
-            receivableAccountId: 'coa_ar',
-            incomeAccountId: 'coa_rev_spp'
+            amountTotal
           })
         });
         if (!res.ok) throw new Error('Gagal membuat tagihan siswa');
@@ -968,7 +963,8 @@ export default function App() {
                 <>
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Pilih Siswa *</label>
-                    <select name="studentId" className="w-full p-2 border rounded bg-white" required>
+                    <select name="studentId" className="w-full p-2 border rounded bg-white" required defaultValue="">
+                      <option value="" disabled>-- Pilih Siswa --</option>
                       {students.map((s) => (
                         <option key={s.id} value={s.id}>{s.name} ({s.nis})</option>
                       ))}
