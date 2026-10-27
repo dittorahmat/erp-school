@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import LoginView from './LoginView';
 import {
   DEMO_USERS,
   UserProfile,
@@ -15,9 +16,14 @@ import {
 } from './types';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('erp_user');
-    return saved ? JSON.parse(saved) : DEMO_USERS.admin;
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return null;
+    }
   });
   const [currentView, setCurrentView] = useState<string>('dashboard');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -44,6 +50,19 @@ export default function App() {
   // Create Modal Sub-tab for Academics
   const [academicTab, setAcademicTab] = useState<'year' | 'subject'>('year');
 
+  // Login & Logout Handlers
+  const handleLogin = (user: UserProfile) => {
+    setCurrentUser(user);
+    localStorage.setItem('erp_user', JSON.stringify(user));
+    setCurrentView('dashboard');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('erp_user');
+    setCurrentUser(null);
+    setUserDropdownOpen(false);
+  };
+
   // Switch User Persona
   const switchUser = (key: string) => {
     const selected = DEMO_USERS[key];
@@ -57,6 +76,7 @@ export default function App() {
 
   // Fetch view data dynamically from D1
   const fetchData = async () => {
+    if (!currentUser) return;
     setLoading(true);
     try {
       if (currentView === 'students' || currentView === 'dashboard' || currentView === 'attendance' || currentView === 'exams') {
@@ -112,8 +132,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [currentView]);
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentView, currentUser]);
 
   // Open Report Card Modal
   const openReportCard = async (student: Student) => {
@@ -341,6 +363,10 @@ export default function App() {
     return found ? found.name : studentId;
   };
 
+  if (!currentUser) {
+    return <LoginView onLogin={handleLogin} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       {/* Top Navbar */}
@@ -408,12 +434,8 @@ export default function App() {
 
                 <div className="border-t border-slate-100 mt-2 pt-1">
                   <button
-                    onClick={() => {
-                      localStorage.removeItem('erp_user');
-                      setUserDropdownOpen(false);
-                      switchUser('admin');
-                    }}
-                    className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-2"
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
                   >
                     <i className="fa-solid fa-arrow-right-from-bracket"></i> Keluar (Logout)
                   </button>
