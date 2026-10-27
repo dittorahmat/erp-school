@@ -233,12 +233,15 @@ export const odooShellHtml = `<!DOCTYPE html>
   <!-- App Client-Side Controller -->
   <script>
     var state = {
-      currentUser: JSON.parse(localStorage.getItem('erp_user') || JSON.stringify({
-        name: 'Bambang Sudarmono, M.Pd',
-        role: 'superadmin',
-        email: 'admin@sekolah.demo',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-      })),
+      currentUser: (function() {
+        var saved = localStorage.getItem('erp_user');
+        if (!saved) return null;
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          return null;
+        }
+      })(),
       currentView: 'dashboard',
       cache: {
         students: [],
