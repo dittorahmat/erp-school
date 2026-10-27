@@ -113,7 +113,7 @@ export const examManagement = {
     return {
       studentId,
       status: "published",
-      term: "Semester Ganjil 2025/2026",
+      term: `Semester Ganjil ${(await db.select().from(schema.academicYears).where(eq(schema.academicYears.status, "active")).limit(1))[0]?.name || "2026/2027"}`,
       summary: {
         totalSubjects: marks.length,
         averageScore: marks.length > 0 ? (marks.reduce((a, b) => a + b.marksObtained, 0) / marks.length).toFixed(1) : 0,

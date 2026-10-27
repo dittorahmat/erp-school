@@ -102,7 +102,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
           </div>
           <div className="text-xs text-purple-100 hidden sm:flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>Tahun Ajaran 2025/2026 Aktif</span>
+            <span>Tahun Ajaran 2026/2027 Aktif</span>
           </div>
         </div>
       </header>

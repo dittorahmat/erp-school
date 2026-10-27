@@ -299,7 +299,7 @@ export default function App() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             schoolId: 'school_sma_hb',
-            academicYearId: 'ay_2025_2026',
+            academicYearId: 'ay_2026_2027',
             termId: 'term_sem1',
             classroomId: 'cls_x_ipa_1',
             subjectId: 'sbj_mat',
@@ -1081,7 +1081,7 @@ export default function App() {
             <div className="flex justify-between items-center pb-3 border-b mb-4">
               <div>
                 <h3 className="font-bold text-slate-800 text-base">Rapor Digital Siswa</h3>
-                <p className="text-xs text-slate-500">{reportData.term || 'Semester Ganjil 2025/2026'}</p>
+                <p className="text-xs text-slate-500">{reportData.term || 'Semester Ganjil 2026/2027'}</p>
               </div>
               <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><i className="fa-solid fa-xmark"></i></button>
             </div>
