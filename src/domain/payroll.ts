@@ -335,10 +335,31 @@ export const payrollEngine = {
       (sum, s) => sum + s.baseSalary + s.teachingHonorAmount + s.allowanceAmount,
       0
     );
+    const totalDeductions = slips.reduce((sum, s) => sum + s.deductionAmount, 0);
     const totalNet = slips.reduce((sum, s) => sum + s.netSalary, 0);
 
-    const expenseAccountId = params?.expenseAccountId || "coa_exp_salary";
-    const paymentAccountId = params?.paymentAccountId || "coa_cash";
+    // Dynamically resolve COA accounts for school if not explicitly provided
+    const allAccounts = await db
+      .select()
+      .from(schema.chartOfAccounts)
+      .where(eq(schema.chartOfAccounts.schoolId, schoolId));
+
+    const expenseAccountId =
+      params?.expenseAccountId ||
+      allAccounts.find((a) => a.type === "expense" && a.code.startsWith("5-11"))?.id ||
+      allAccounts.find((a) => a.type === "expense")?.id ||
+      "coa_exp_salary";
+
+    const paymentAccountId =
+      params?.paymentAccountId ||
+      allAccounts.find((a) => a.type === "asset" && (a.code.startsWith("1-11") || a.reconcile))?.id ||
+      allAccounts.find((a) => a.type === "asset")?.id ||
+      "coa_cash";
+
+    const deductionLiabilityAccountId =
+      allAccounts.find((a) => a.type === "liability" && a.code.startsWith("2-11"))?.id ||
+      allAccounts.find((a) => a.type === "liability")?.id ||
+      "coa_liab_deduction";
 
     const moveId = generateId("move_pay");
     const journalMove = {
@@ -348,7 +369,7 @@ export const payrollEngine = {
       name: `PAYROLL/${batch.periodYear}/${batch.periodMonth.toString().padStart(2, "0")}/${batch.id.slice(-4)}`,
       date: new Date().toISOString().split("T")[0],
       moveType: "entry",
-      amountTotal: totalNet,
+      amountTotal: totalGross,
       amountResidual: 0,
       state: "posted",
       paymentState: "paid",
@@ -356,22 +377,24 @@ export const payrollEngine = {
       updatedAt: new Date(),
     };
 
+    // Debit: Beban Gaji Bruto
     const debitLine = {
       id: generateId("aml_deb"),
       moveId,
       accountId: expenseAccountId,
-      name: `Beban Gaji & Honor Guru/Staf - ${batch.name}`,
-      debit: totalNet,
+      name: `Beban Gaji Bruto Guru/Staf - ${batch.name}`,
+      debit: totalGross,
       credit: 0,
       reconciled: false,
       createdAt: new Date(),
     };
 
+    // Credit: Kas/Bank Netto Dibayarkan
     const creditLine = {
       id: generateId("aml_crd"),
       moveId,
       accountId: paymentAccountId,
-      name: `Kas Pengeluaran Penggajian - ${batch.name}`,
+      name: `Kas Pembayaran Gaji Bersih - ${batch.name}`,
       debit: 0,
       credit: totalNet,
       reconciled: false,
@@ -392,8 +415,23 @@ export const payrollEngine = {
       db.insert(schema.accountMoveLines).values(creditLine),
     ];
 
+    // Jika ada potongan (BPJS/kasbon), catat credit akun liabilitas penampung potongan sehingga total Debit == total Credit
+    if (totalDeductions > 0) {
+      const deductionLine = {
+        id: generateId("aml_ded"),
+        moveId,
+        accountId: deductionLiabilityAccountId,
+        name: `Potongan Gaji / BPJS Guru/Staf - ${batch.name}`,
+        debit: 0,
+        credit: totalDeductions,
+        reconciled: false,
+        createdAt: new Date(),
+      };
+      stmts.push(db.insert(schema.accountMoveLines).values(deductionLine));
+    }
+
     await db.batch(stmts as any);
-    return { success: true, batchRunId, moveId, totalAmount: totalNet };
+    return { success: true, batchRunId, moveId, totalGross, totalNet, totalDeductions };
   },
 
   async getPayslips(d1: D1Database, schoolId?: string, employeeId?: string) {

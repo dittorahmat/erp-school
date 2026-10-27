@@ -1,7 +1,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { eq, inArray, desc } from "drizzle-orm";
+import { eq, inArray, desc, sql } from "drizzle-orm";
 
 export interface PortalScope {
   role: string;
@@ -281,30 +281,15 @@ export const portalManagement = {
    */
   async getEmployeePayslips(d1: D1Database, userId: string) {
     const db = drizzle(d1, { schema });
-    // Find employee linked via userId or check if employee id matches
-    const empList = await db
-      .select()
+    // Resolve employee either linked via userId or matching direct employee id
+    const employees = await db
+      .select({ id: schema.employees.id })
       .from(schema.employees)
-      .where(eq(schema.employees.userId, userId))
+      .where(sql`${schema.employees.userId} = ${userId} OR ${schema.employees.id} = ${userId}`)
       .limit(1);
 
-    const employeeId = empList[0]?.id;
-    if (!employeeId) {
-      // Fallback: check if userId itself is an employee id
-      const directEmp = await db
-        .select()
-        .from(schema.employees)
-        .where(eq(schema.employees.id, userId))
-        .limit(1);
-      if (directEmp[0]) {
-        return db
-          .select()
-          .from(schema.payslips)
-          .where(eq(schema.payslips.employeeId, directEmp[0].id))
-          .orderBy(desc(schema.payslips.createdAt));
-      }
-      return [];
-    }
+    const employeeId = employees[0]?.id;
+    if (!employeeId) return [];
 
     return db
       .select()

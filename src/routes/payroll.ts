@@ -58,9 +58,13 @@ payrollRouter.get("/batches", async (c) => {
   return c.json({ data: batches });
 });
 
-payrollRouter.post("/batches/generate", async (c) => {
+// Batch generation handler supporting both /batches/generate and spec canonical /batch/generate
+const handleBatchGenerate = async (c: any) => {
   const body = await c.req.json();
-  const schoolId = body.schoolId || "school_sma_hb";
+  const schoolId = body.schoolId || c.req.header("x-school-id") || c.req.query("schoolId");
+  if (!schoolId) {
+    return c.json({ error: "schoolId is required" }, 400);
+  }
   const month = Number(body.month || new Date().getMonth() + 1);
   const year = Number(body.year || new Date().getFullYear());
   const result = await payrollEngine.generateMonthlyPayslipBatch(
@@ -71,11 +75,18 @@ payrollRouter.post("/batches/generate", async (c) => {
     body.name
   );
   return c.json({ success: true, data: result }, 201);
-});
+};
 
-payrollRouter.post("/batches/confirm", async (c) => {
+payrollRouter.post("/batches/generate", handleBatchGenerate);
+payrollRouter.post("/batch/generate", handleBatchGenerate);
+
+// Batch confirmation handler supporting both /batches/confirm and spec canonical /batch/confirm
+const handleBatchConfirm = async (c: any) => {
   const body = await c.req.json();
-  const schoolId = body.schoolId || "school_sma_hb";
+  const schoolId = body.schoolId || c.req.header("x-school-id") || c.req.query("schoolId");
+  if (!schoolId) {
+    return c.json({ error: "schoolId is required" }, 400);
+  }
   const batchRunId = body.batchRunId;
   if (!batchRunId) {
     return c.json({ error: "batchRunId is required" }, 400);
@@ -94,4 +105,7 @@ payrollRouter.post("/batches/confirm", async (c) => {
   } catch (err: any) {
     return c.json({ error: err.message || "Failed to confirm batch" }, 400);
   }
-});
+};
+
+payrollRouter.post("/batches/confirm", handleBatchConfirm);
+payrollRouter.post("/batch/confirm", handleBatchConfirm);

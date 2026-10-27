@@ -1,7 +1,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { generateId } from "../lib/utils";
 
 export interface CreateInvoiceParams {
@@ -110,6 +110,22 @@ export const accountingEngine = {
     }
   ) {
     const db = drizzle(d1, { schema });
+    // Guardrail: check code uniqueness per school
+    const existing = await db
+      .select()
+      .from(schema.chartOfAccounts)
+      .where(
+        and(
+          eq(schema.chartOfAccounts.schoolId, params.schoolId),
+          eq(schema.chartOfAccounts.code, params.code)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error(`Kode akun ${params.code} sudah digunakan di sekolah ini`);
+    }
+
     const id = params.id || generateId("coa");
     const newAccount = {
       id,
@@ -135,6 +151,17 @@ export const accountingEngine = {
     }
   ) {
     const db = drizzle(d1, { schema });
+    // Guardrail: check if account is locked by journal transactions
+    const existingLines = await db
+      .select()
+      .from(schema.accountMoveLines)
+      .where(eq(schema.accountMoveLines.accountId, id))
+      .limit(1);
+
+    if (existingLines.length > 0 && (params.code !== undefined || params.type !== undefined)) {
+      throw new Error("Kode dan klasifikasi akun tidak dapat diubah karena sudah memiliki riwayat transaksi/jurnal");
+    }
+
     const updateData: any = {};
     if (params.name !== undefined) updateData.name = params.name;
     if (params.code !== undefined) updateData.code = params.code;
