@@ -129,13 +129,6 @@ export function calculateStraightLineSchedule(
   let curMonth = startMonth;
 
   for (let i = 1; i <= durationMonths; i++) {
-    // Advance 1 month each period
-    curMonth++;
-    if (curMonth > 12) {
-      curMonth = 1;
-      curYear++;
-    }
-
     // Determine end of month or target day
     const day = Math.min(startDay || 1, 28);
     const dateFormatted = `${curYear}-${curMonth.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
@@ -156,6 +149,13 @@ export function calculateStraightLineSchedule(
       accumulatedAmount: accumulated,
       remainingValue: remaining,
     });
+
+    // Advance 1 month for subsequent period
+    curMonth++;
+    if (curMonth > 12) {
+      curMonth = 1;
+      curYear++;
+    }
   }
 
   return schedule;

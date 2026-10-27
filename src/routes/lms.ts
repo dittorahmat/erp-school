@@ -30,7 +30,12 @@ lmsRouter.get("/assignments/:id", async (c) => {
 
 // POST /api/lms/assignments - Create assignment
 lmsRouter.post("/assignments", async (c) => {
+  const schoolId = c.req.query("schoolId") || c.req.header("x-school-id");
   const body = await c.req.json();
+  const effectiveSchoolId = body.schoolId || schoolId;
+  if (!effectiveSchoolId) {
+    return c.json({ success: false, error: "schoolId is required" }, 400);
+  }
   if (!body.title || !body.classroomId || !body.subjectId || !body.facultyId || !body.dueDate) {
     return c.json(
       { success: false, error: "Missing required fields: title, classroomId, subjectId, facultyId, dueDate" },
@@ -38,7 +43,10 @@ lmsRouter.post("/assignments", async (c) => {
     );
   }
 
-  const created = await lmsManagement.createAssignment(c.env.DB, body);
+  const created = await lmsManagement.createAssignment(c.env.DB, {
+    ...body,
+    schoolId: effectiveSchoolId,
+  });
   return c.json({ success: true, data: created }, 201);
 });
 

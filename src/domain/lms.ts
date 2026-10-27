@@ -118,13 +118,16 @@ export const lmsManagement = {
    * Create a new assignment
    */
   async createAssignment(d1: D1Database, input: CreateAssignmentInput) {
+    if (!input.schoolId) {
+      throw new Error("schoolId is required to create an assignment");
+    }
     const db = drizzle(d1, { schema });
     const id = input.id || generateId("asgn");
     const now = new Date();
 
     const record = {
       id,
-      schoolId: input.schoolId || "sch_smp_01",
+      schoolId: input.schoolId,
       classroomId: input.classroomId,
       subjectId: input.subjectId,
       facultyId: input.facultyId,
