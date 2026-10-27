@@ -22,7 +22,8 @@
     "db:reset:remote": "wrangler d1 execute erp-school-db --remote --file=./src/db/reset.sql -y",
     "db:demo:reset:remote": "npm run db:reset:remote && npm run db:seed:remote",
     "deploy": "npm run build && wrangler deploy",
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "postinstall": "npm run build"
   },
   "repository": {
     "type": "git",
