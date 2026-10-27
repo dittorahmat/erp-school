@@ -39,6 +39,10 @@ export default function App() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [trialBalance, setTrialBalance] = useState<TrialBalanceReport | null>(null);
   const [inventory, setInventory] = useState<InventoryProduct[]>([]);
+  const [feeStructures, setFeeStructures] = useState<any[]>([]);
+  const [showBatchFeeModal, setShowBatchFeeModal] = useState(false);
+  const [batchMonth, setBatchMonth] = useState('2026-10');
+  const [selectedFeeStructureId, setSelectedFeeStructureId] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Modals
@@ -712,7 +716,17 @@ export default function App() {
             {currentView === 'finance' && (
               <div className="space-y-6">
                 <div className="bg-white rounded border border-slate-200 overflow-hidden">
-                  <div className="p-3.5 border-b border-slate-200 font-bold text-slate-800 text-xs">Daftar Tagihan Siswa (Invoices)</div>
+                  
+                  <div className="p-3.5 border-b border-slate-200 font-bold text-slate-800 text-xs flex justify-between items-center">
+                    <span>Daftar Tagihan Siswa (Invoices)</span>
+                    <button
+                      onClick={() => setShowBatchFeeModal(true)}
+                      className="bg-[#714B67] hover:bg-[#583950] text-white px-3 py-1 rounded text-xs font-semibold cursor-pointer"
+                    >
+                      + Generate SPP Bulanan Massal
+                    </button>
+                  </div>
+
                   <table className="w-full text-left text-xs text-slate-700">
                     <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
                       <tr>
@@ -798,6 +812,90 @@ export default function App() {
           </>
         )}
       </main>
+      {/* Batch Fee Generator Modal */}
+      {showBatchFeeModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+            <h3 className="font-bold text-slate-800 text-sm mb-2">Generate Tagihan SPP Bulanan Massal</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Menghasilkan invoice draf otomatis untuk seluruh siswa aktif berdasarkan struktur tarif biaya.
+            </p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const res = await fetch('/api/finance/generate-fees', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      schoolId: 'sch_01',
+                      academicYearId: academicYears.find(ay => ay.status === 'active')?.id || academicYears[0]?.id || '',
+                      month: batchMonth,
+                      feeStructureId: selectedFeeStructureId || feeStructures[0]?.id
+                    })
+                  });
+                  const json = await res.json();
+                  if (res.ok) {
+                    alert(`Berhasil membuat ${json.data.generatedCount} tagihan SPP periode ${batchMonth}!`);
+                    setShowBatchFeeModal(false);
+                    fetchData();
+                  } else {
+                    alert('Gagal: ' + (json.error || 'Terjadi kesalahan'));
+                  }
+                } catch (err: any) {
+                  alert('Error generate fees: ' + err.message);
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Periode Bulan Tagihan</label>
+                <input
+                  type="month"
+                  required
+                  value={batchMonth}
+                  onChange={(e) => setBatchMonth(e.target.value)}
+                  className="w-full text-xs border border-slate-300 rounded p-2 focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Struktur Biaya (Tarif)</label>
+                <select
+                  value={selectedFeeStructureId}
+                  onChange={(e) => setSelectedFeeStructureId(e.target.value)}
+                  className="w-full text-xs border border-slate-300 rounded p-2 focus:outline-hidden"
+                >
+                  {feeStructures.length === 0 ? (
+                    <option value="">Belum ada struktur biaya</option>
+                  ) : (
+                    feeStructures.map((f: any) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name} - Rp {Number(f.amount).toLocaleString('id-ID')}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBatchFeeModal(false)}
+                  className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 text-xs bg-[#714B67] hover:bg-[#583950] text-white rounded font-semibold cursor-pointer"
+                >
+                  Eksekusi Batch Invoicing
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
 
       {/* Dynamic Create Modal */}
       {activeModal === 'create' && (

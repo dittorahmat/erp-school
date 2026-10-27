@@ -439,3 +439,32 @@ export const admissionApplications = sqliteTable('admission_applications', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
+
+// --------------------------------------------------------------------------
+// Fee Structures & Categories (OpenEduCat / Odoo Fee Management)
+// --------------------------------------------------------------------------
+export const feeCategories = sqliteTable('fee_categories', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // e.g. "SPP Bulanan", "Uang Gedung", "Biaya Praktikum"
+  code: text('code').notNull(),
+  description: text('description'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+export const feeStructures = sqliteTable('fee_structures', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  academicYearId: text('academic_year_id').notNull().references(() => academicYears.id),
+  gradeLevelId: text('grade_level_id').references(() => gradeLevels.id),
+  courseId: text('course_id').references(() => courses.id),
+  categoryId: text('category_id').notNull().references(() => feeCategories.id),
+  name: text('name').notNull(), // e.g. "SPP Kelas 10 Reguler"
+  code: text('code').notNull(),
+  amount: real('amount').notNull(),
+  interval: text('interval').notNull().default('monthly'), // monthly, term, yearly, once
+  receivableAccountId: text('receivable_account_id').references(() => chartOfAccounts.id),
+  incomeAccountId: text('income_account_id').references(() => chartOfAccounts.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});

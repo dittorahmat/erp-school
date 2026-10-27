@@ -201,3 +201,22 @@ export interface AdmissionApplication {
   enrolledStudentId?: string | null;
   notes?: string | null;
 }
+
+export interface FeeCategory {
+  id: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  description?: string | null;
+}
+
+export interface FeeStructure {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  categoryId: string;
+  name: string;
+  code: string;
+  amount: number;
+  interval: string;
+}
