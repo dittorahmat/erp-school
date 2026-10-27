@@ -392,7 +392,7 @@ export const payrollEngine = {
       db.insert(schema.accountMoveLines).values(creditLine),
     ];
 
-    await db.batch(stmts);
+    await db.batch(stmts as any);
     return { success: true, batchRunId, moveId, totalAmount: totalNet };
   },
 
