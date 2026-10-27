@@ -275,4 +275,41 @@ export const portalManagement = {
       invoices,
     };
   },
+
+  /**
+   * Returns payslips for employee linked to userId.
+   */
+  async getEmployeePayslips(d1: D1Database, userId: string) {
+    const db = drizzle(d1, { schema });
+    // Find employee linked via userId or check if employee id matches
+    const empList = await db
+      .select()
+      .from(schema.employees)
+      .where(eq(schema.employees.userId, userId))
+      .limit(1);
+
+    const employeeId = empList[0]?.id;
+    if (!employeeId) {
+      // Fallback: check if userId itself is an employee id
+      const directEmp = await db
+        .select()
+        .from(schema.employees)
+        .where(eq(schema.employees.id, userId))
+        .limit(1);
+      if (directEmp[0]) {
+        return db
+          .select()
+          .from(schema.payslips)
+          .where(eq(schema.payslips.employeeId, directEmp[0].id))
+          .orderBy(desc(schema.payslips.createdAt));
+      }
+      return [];
+    }
+
+    return db
+      .select()
+      .from(schema.payslips)
+      .where(eq(schema.payslips.employeeId, employeeId))
+      .orderBy(desc(schema.payslips.createdAt));
+  },
 };

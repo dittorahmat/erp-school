@@ -91,3 +91,14 @@ portalRouter.get("/invoices", async (c) => {
     return c.json({ success: false, error: err.message }, status);
   }
 });
+
+// GET /api/portal/my-payslips
+portalRouter.get("/my-payslips", async (c) => {
+  const { userId } = getUserFromContext(c);
+  try {
+    const payslips = await portalManagement.getEmployeePayslips(c.env.DB, userId);
+    return c.json({ success: true, data: payslips });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
