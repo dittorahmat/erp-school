@@ -5,6 +5,7 @@ import LibraryView from './LibraryView';
 import PortalView from './PortalView';
 import { PayrollView } from './PayrollView';
 import { PurchasingView } from './PurchasingView';
+import { AssetsView } from './AssetsView';
 import {
   DEMO_USERS,
   UserProfile,
@@ -423,7 +424,7 @@ export default function App() {
           <nav className="hidden md:flex space-x-1 text-xs pl-3 overflow-x-auto">
             {(currentUser.role === 'student' || currentUser.role === 'guardian'
               ? ['portal']
-              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'purchasing', 'payroll', 'inventory', 'library', 'portal']
+              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'purchasing', 'assets', 'payroll', 'inventory', 'library', 'portal']
             ).map((view) => (
               <button
                 key={view}
@@ -446,6 +447,8 @@ export default function App() {
                   ? 'Keuangan (SPP)'
                   : view === 'purchasing'
                   ? 'Pengadaan (PO)'
+                  : view === 'assets'
+                  ? 'Aset Tetap'
                   : view === 'payroll'
                   ? 'HR & Penggajian'
                   : view === 'inventory'
@@ -547,6 +550,7 @@ export default function App() {
           <>
             {currentView === 'admission' && <AdmissionView />}
             {currentView === 'library' && <LibraryView />}
+            {currentView === 'assets' && <AssetsView />}
             {currentView === 'payroll' && <PayrollView />}
             {currentView === 'purchasing' && <PurchasingView />}
             {currentView === 'portal' && <PortalView currentUser={currentUser} />}

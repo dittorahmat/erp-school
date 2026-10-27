@@ -635,5 +635,43 @@ export const purchaseOrderLines = sqliteTable('purchase_order_lines', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
 
+// --------------------------------------------------------------------------
+// Fixed Asset Management & Straight-Line Depreciation (Odoo account.asset)
+// --------------------------------------------------------------------------
+export const fixedAssets = sqliteTable('fixed_assets', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // e.g. "Server Lab Komputer Dell EMC"
+  code: text('code').notNull().unique(), // e.g. "AST-SRV-001"
+  category: text('category').notNull().default('equipment'), // equipment, vehicle, building, electronic
+  purchaseDate: text('purchase_date').notNull(), // YYYY-MM-DD
+  purchaseValue: real('purchase_value').notNull(), // Harga perolehan
+  salvageValue: real('salvage_value').notNull().default(0), // Nilai residu
+  depreciableValue: real('depreciable_value').notNull(), // purchase_value - salvage_value
+  method: text('method').notNull().default('straight_line'), // straight_line
+  durationMonths: integer('duration_months').notNull(), // Masa manfaat dalam bulan (e.g. 48)
+  assetAccountId: text('asset_account_id').notNull().references(() => chartOfAccounts.id), // Akun Aset Tetap
+  depreciationAccountId: text('depreciation_account_id').notNull().references(() => chartOfAccounts.id), // Akun Akumulasi Penyusutan
+  expenseAccountId: text('expense_account_id').notNull().references(() => chartOfAccounts.id), // Akun Beban Penyusutan
+  journalId: text('journal_id').notNull().references(() => journals.id), // Jurnal Umum / Misc
+  status: text('status').notNull().default('draft'), // draft, running, depreciated, disposed
+  notes: text('notes'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
 
+export const assetDepreciationLines = sqliteTable('asset_depreciation_lines', {
+  id: text('id').primaryKey(),
+  assetId: text('asset_id').notNull().references(() => fixedAssets.id, { onDelete: 'cascade' }),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  sequence: integer('sequence').notNull(), // Periode ke-1, 2, ... N
+  depreciationDate: text('depreciation_date').notNull(), // YYYY-MM-DD
+  amount: real('amount').notNull(), // Angsuran penyusutan bulan ini
+  accumulatedAmount: real('accumulated_amount').notNull(), // Akumulasi penyusutan hingga periode ini
+  remainingValue: real('remaining_value').notNull(), // Nilai buku tersisa setelah penyusutan
+  status: text('status').notNull().default('draft'), // draft, posted, cancelled
+  moveId: text('move_id').references(() => accountMoves.id), // Journal Entry ID ketika diposting
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
 
