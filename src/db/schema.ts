@@ -397,3 +397,45 @@ export const stockMoves = sqliteTable('stock_moves', {
   state: text('state').notNull().default('draft'), // draft, done, cancel
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
+
+// --------------------------------------------------------------------------
+// PPDB / Student Admission (OpenEduCat model)
+// --------------------------------------------------------------------------
+export const admissionRegisters = sqliteTable('admission_registers', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  academicYearId: text('academic_year_id').notNull().references(() => academicYears.id),
+  courseId: text('course_id').references(() => courses.id),
+  name: text('name').notNull(),
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date').notNull(),
+  maxApplications: integer('max_applications').default(100),
+  applicationFee: real('application_fee').default(0),
+  admissionFee: real('admission_fee').default(0),
+  status: text('status').notNull().default('draft'), // draft, open, closed, done
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const admissionApplications = sqliteTable('admission_applications', {
+  id: text('id').primaryKey(),
+  registerId: text('register_id').notNull().references(() => admissionRegisters.id),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  applicationNumber: text('application_number').notNull().unique(),
+  name: text('name').notNull(),
+  gender: text('gender').notNull(),
+  birthDate: text('birth_date'),
+  birthPlace: text('birth_place'),
+  email: text('email').notNull(),
+  phone: text('phone').notNull(),
+  address: text('address'),
+  guardianName: text('guardian_name').notNull(),
+  guardianPhone: text('guardian_phone').notNull(),
+  guardianRelation: text('guardian_relation').default('parent'),
+  prevSchool: text('prev_school'),
+  status: text('status').notNull().default('draft'), // draft, submitted, verified, approved, rejected, enrolled
+  enrolledStudentId: text('enrolled_student_id').references(() => students.id),
+  notes: text('notes'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});

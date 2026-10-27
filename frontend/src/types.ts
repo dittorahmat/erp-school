@@ -166,3 +166,38 @@ export const DEMO_USERS: Record<string, UserProfile> = {
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100'
   }
 };
+
+export interface AdmissionRegister {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  courseId?: string | null;
+  name: string;
+  startDate: string;
+  endDate: string;
+  maxApplications: number;
+  applicationFee: number;
+  admissionFee: number;
+  status: 'draft' | 'open' | 'closed' | 'done';
+}
+
+export interface AdmissionApplication {
+  id: string;
+  registerId: string;
+  schoolId: string;
+  applicationNumber: string;
+  name: string;
+  gender: 'male' | 'female';
+  birthDate?: string | null;
+  birthPlace?: string | null;
+  email: string;
+  phone: string;
+  address?: string | null;
+  guardianName: string;
+  guardianPhone: string;
+  guardianRelation?: string | null;
+  prevSchool?: string | null;
+  status: 'draft' | 'submitted' | 'verified' | 'approved' | 'rejected' | 'enrolled';
+  enrolledStudentId?: string | null;
+  notes?: string | null;
+}

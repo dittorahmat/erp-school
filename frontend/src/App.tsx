@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import LoginView from './LoginView';
+import AdmissionView from './AdmissionView';
 import {
   DEMO_USERS,
   UserProfile,
@@ -399,7 +400,7 @@ export default function App() {
             <i className="fa-solid fa-graduation-cap"></i> ERP Sekolah
           </span>
           <nav className="hidden md:flex space-x-1 text-xs pl-3 overflow-x-auto">
-            {['dashboard', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory'].map((view) => (
+            {['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory'].map((view) => (
               <button
                 key={view}
                 onClick={() => setCurrentView(view)}
@@ -407,7 +408,7 @@ export default function App() {
                   currentView === view ? 'bg-[#583950] font-semibold' : 'hover:bg-[#583950]'
                 }`}
               >
-                {view === 'academics' ? 'Akademik' : view === 'attendance' ? 'Presensi' : view === 'exams' ? 'Ujian & Nilai' : view === 'finance' ? 'Keuangan (SPP)' : view === 'inventory' ? 'Inventaris' : view === 'students' ? 'Siswa' : 'Dashboard'}
+                {view === 'admission' ? 'PPDB' : view === 'academics' ? 'Akademik' : view === 'attendance' ? 'Presensi' : view === 'exams' ? 'Ujian & Nilai' : view === 'finance' ? 'Keuangan (SPP)' : view === 'inventory' ? 'Inventaris' : view === 'students' ? 'Siswa' : 'Dashboard'}
               </button>
             ))}
           </nav>
@@ -498,6 +499,8 @@ export default function App() {
           <div className="p-8 text-center text-slate-400">Memuat data dari D1...</div>
         ) : (
           <>
+            {currentView === 'admission' && <AdmissionView />}
+
             {currentView === 'dashboard' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
