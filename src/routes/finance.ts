@@ -48,7 +48,10 @@ financeRouter.delete("/accounts/:id", async (c) => {
 
 financeRouter.post("/accounts/seed-psak", async (c) => {
   const body = await c.req.json();
-  const schoolId = body.schoolId || "school_sma_hb";
+  const schoolId = body.schoolId || c.req.header("x-school-id") || c.req.query("schoolId");
+  if (!schoolId) {
+    return c.json({ error: "schoolId is required" }, 400);
+  }
   const result = await accountingEngine.seedPsakAccounts(c.env.DB, schoolId);
   return c.json({ success: true, data: result }, 201);
 });
@@ -101,7 +104,7 @@ financeRouter.get("/trial-balance", async (c) => {
 });
 
 financeRouter.get("/fee-categories", async (c) => {
-  const schoolId = c.req.query("schoolId") || "sch_01";
+  const schoolId = c.req.query("schoolId") || c.req.header("x-school-id") || "";
   const db = (c as any).var?.db;
   const categories = await listFeeCategories(db, schoolId);
   return c.json({ data: categories });
@@ -115,7 +118,7 @@ financeRouter.post("/fee-categories", async (c) => {
 });
 
 financeRouter.get("/fee-structures", async (c) => {
-  const schoolId = c.req.query("schoolId") || "sch_01";
+  const schoolId = c.req.query("schoolId") || c.req.header("x-school-id") || "";
   const db = (c as any).var?.db;
   const structures = await listFeeStructures(db, schoolId);
   return c.json({ data: structures });

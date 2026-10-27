@@ -53,3 +53,15 @@
   - Jika seorang wali murid (guardian) memiliki beberapa anak terkait dan `targetStudentId` tidak dispesifikasikan dalam query parameter, domain `assertPortalAccess` dan router portal WAJIB secara aman fallback ke anak pertama yang terhubung (`scope.studentIds[0]`) tanpa melempar HTTP 403 Forbidden.
 - **Invoicing Preview Requirement Before Batch Postings**:
   - Seluruh alur batch fee invoicing di frontend WAJIB menyajikan tahapan pratinjau (preview modal / confirmation dialog) yang menampilkan jumlah siswa eligible teridentifikasi dan total estimasi nominal rupiah sebelum mengeksekusi operasi posting ke D1 database.
+
+## 9. Accounting & Payroll Invariants (Odoo & PSAK Alignment)
+- **Dynamic COA Resolution & Anti-Hardcoded Accounts**:
+  - Dilarang keras menggunakan ID akun statis (seperti `coa_exp_salary`, `coa_cash`) saat posting jurnal otomatis. Wajib menyelesaikan ID akun secara dinamis melalui helper resolver COA sekolah atau memverifikasi keberadaan akun di tabel `chart_of_accounts`.
+- **Gross Payroll Journal Booking**:
+  - Jurnal penggajian wajib membukukan `Debit: Beban Gaji = Total Gross` dan `Credit: Kas/Bank = Total Net`, serta `Credit: Utang Potongan/Pihak Ketiga = Total Deductions` jika terdapat potongan, sehingga selalu berimbang Total Debit == Total Credit.
+- **COA Code Uniqueness & Mutation Lock**:
+  - Pembuatan akun baru wajib memvalidasi keunikan kode per sekolah (`school_id` + `code`).
+  - Akun yang sudah memiliki mutasi pada `account_move_lines` dilarang dihapus atau diubah kode dan klasifikasi tipenya.
+- **Strict Route Multi-Tenancy**:
+  - Dilarang menyematkan string sekolah hardcoded (seperti `"school_sma_hb"`) sebagai fallback di dalam file `src/routes/*`. Tenant ID wajib didapatkan secara eksplisit dari header, query, body, atau token session.
+

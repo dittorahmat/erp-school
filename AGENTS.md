@@ -48,10 +48,6 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Wajib jalankan `npm run build`, `npm run typecheck`, dan `npm run test` sebelum commit atau merge ke `main`.
   - Kolom SQL D1 wajib berformat `snake_case`, cocokkan dengan pemetaan `drizzle-orm` di `src/db/schema.ts`.
   - Transaksi akuntansi wajib berimbang Debit = Credit (`/api/finance/trial-balance`).
-- **Anti-Regression Guardrails untuk Modul Akuntansi & Payroll**:
-  - **MANDAT KETAT**: Dilarang menggunakan ID akun hardcoded sembarangan (seperti `coa_exp_salary`, `coa_cash`) saat posting jurnal otomatis. Wajib menyelesaikan ID akun secara dinamis melalui helper resolver COA sekolah atau memvalidasi keberadaan akun di `chart_of_accounts`.
-  - **Jurnal Beban Gaji Wajib Bruto**: Jurnal penggajian wajib membukukan `Debit: Beban Gaji = Total Gross` dan `Credit: Kas/Bank = Total Net`, serta `Credit: Utang Potongan/Pihak Ketiga = Total Deductions` jika terdapat potongan, sehingga selalu berimbang Total Debit == Total Credit.
-  - **Validasi Keunikan & Proteksi Akun COA**: Pembuatan akun baru wajib memvalidasi keunikan kode per sekolah (`school_id` + `code`), dan akun yang sudah memiliki mutasi pada `account_move_lines` dilarang dihapus atau diubah kode/klasifikasinya.
-  - **Larangan Hardcoded Tenant Fallback di Rute**: Dilarang menyematkan string sekolah hardcoded (seperti `school_sma_hb`) sebagai fallback di dalam file `src/routes/*`. Tenant ID wajib didapatkan secara eksplisit dari header, query, body, atau token session.
-- **Domain Integration & Client Rules Pointer**:
-  - Untuk aturan lengkap mengenai canonical parameter domain module, multi-child portal fallback, preview batch invoicing, dan isolasi domain frontend: **lihat `CODING_STANDARDS.md` §7 & §8**.
+- **Domain Integration & Accounting Standards Pointer**:
+  - Untuk aturan lengkap mengenai canonical parameter domain module, multi-child portal fallback, preview batch invoicing, resolusi dinamis COA PSAK, serta jurnal bruto payroll: **lihat `CODING_STANDARDS.md` §7, §8, & §9**.
+
