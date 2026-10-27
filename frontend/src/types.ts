@@ -334,3 +334,72 @@ export interface LibraryIssue {
   notes?: string | null;
   createdAt: string;
 }
+
+export interface ChartOfAccount {
+  id: string;
+  schoolId: string;
+  code: string;
+  name: string;
+  type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  reconcile?: boolean;
+}
+
+export interface Employee {
+  id: string;
+  schoolId: string;
+  userId?: string | null;
+  name: string;
+  nip: string;
+  email: string;
+  phone?: string | null;
+  type: 'faculty' | 'staff';
+  department?: string | null;
+  jobTitle: string;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  status: 'active' | 'inactive';
+}
+
+export interface SalaryStructure {
+  id: string;
+  schoolId: string;
+  employeeId: string;
+  baseSalary: number;
+  hourlyTeachingRate: number;
+  fixedAllowance: number;
+  fixedDeduction: number;
+  status: 'active' | 'archived';
+  employeeName?: string;
+}
+
+export interface Payslip {
+  id: string;
+  schoolId: string;
+  batchRunId?: string | null;
+  employeeId: string;
+  employeeName?: string;
+  employeeNip?: string;
+  periodMonth: number;
+  periodYear: number;
+  baseSalary: number;
+  teachingSessionsCount: number;
+  teachingHonorAmount: number;
+  allowanceAmount: number;
+  deductionAmount: number;
+  netSalary: number;
+  status: 'draft' | 'confirmed' | 'paid' | 'cancelled';
+  moveId?: string | null;
+  createdAt: number | string;
+}
+
+export interface PayslipBatchRun {
+  id: string;
+  schoolId: string;
+  name: string;
+  periodMonth: number;
+  periodYear: number;
+  totalAmount: number;
+  totalEmployees: number;
+  status: 'draft' | 'confirmed';
+  createdAt: number | string;
+}

@@ -86,9 +86,123 @@ export async function resolveDefaultAccountsAndJournal(
  * and Cloudflare D1 atomic batch compilation behind a minimal interface.
  */
 export const accountingEngine = {
-  async getAccounts(d1: D1Database) {
+  async getAccounts(d1: D1Database, schoolId?: string) {
     const db = drizzle(d1, { schema });
+    if (schoolId) {
+      return db
+        .select()
+        .from(schema.chartOfAccounts)
+        .where(eq(schema.chartOfAccounts.schoolId, schoolId))
+        .orderBy(schema.chartOfAccounts.code);
+    }
     return db.select().from(schema.chartOfAccounts).orderBy(schema.chartOfAccounts.code);
+  },
+
+  async createAccount(
+    d1: D1Database,
+    params: {
+      id?: string;
+      schoolId: string;
+      code: string;
+      name: string;
+      type: "asset" | "liability" | "equity" | "income" | "expense";
+      reconcile?: boolean;
+    }
+  ) {
+    const db = drizzle(d1, { schema });
+    const id = params.id || generateId("coa");
+    const newAccount = {
+      id,
+      schoolId: params.schoolId,
+      code: params.code,
+      name: params.name,
+      type: params.type,
+      reconcile: Boolean(params.reconcile),
+      createdAt: new Date(),
+    };
+    await db.insert(schema.chartOfAccounts).values(newAccount);
+    return newAccount;
+  },
+
+  async updateAccount(
+    d1: D1Database,
+    id: string,
+    params: {
+      name?: string;
+      code?: string;
+      type?: "asset" | "liability" | "equity" | "income" | "expense";
+      reconcile?: boolean;
+    }
+  ) {
+    const db = drizzle(d1, { schema });
+    const updateData: any = {};
+    if (params.name !== undefined) updateData.name = params.name;
+    if (params.code !== undefined) updateData.code = params.code;
+    if (params.type !== undefined) updateData.type = params.type;
+    if (params.reconcile !== undefined) updateData.reconcile = params.reconcile;
+
+    await db
+      .update(schema.chartOfAccounts)
+      .set(updateData)
+      .where(eq(schema.chartOfAccounts.id, id));
+
+    const updated = await db
+      .select()
+      .from(schema.chartOfAccounts)
+      .where(eq(schema.chartOfAccounts.id, id))
+      .limit(1);
+    return updated[0] || null;
+  },
+
+  async deleteAccount(d1: D1Database, id: string) {
+    const db = drizzle(d1, { schema });
+    // Guardrail: check if account has existing journal move lines
+    const existingLines = await db
+      .select()
+      .from(schema.accountMoveLines)
+      .where(eq(schema.accountMoveLines.accountId, id))
+      .limit(1);
+
+    if (existingLines.length > 0) {
+      throw new Error("Akun tidak dapat dihapus karena sudah memiliki riwayat transaksi/jurnal");
+    }
+
+    await db.delete(schema.chartOfAccounts).where(eq(schema.chartOfAccounts.id, id));
+    return { success: true, id };
+  },
+
+  async seedPsakAccounts(d1: D1Database, schoolId: string) {
+    const db = drizzle(d1, { schema });
+    const defaultPsak = [
+      { code: "1-1101", name: "Kas Operasional Sekolah", type: "asset" as const, reconcile: true },
+      { code: "1-1102", name: "Bank Yayasan (Operasional)", type: "asset" as const, reconcile: true },
+      { code: "1-1201", name: "Piutang SPP Siswa", type: "asset" as const, reconcile: true },
+      { code: "1-1202", name: "Piutang Uang Gedung / PPDB", type: "asset" as const, reconcile: true },
+      { code: "2-1101", name: "Utang Gaji Guru & Staf", type: "liability" as const, reconcile: true },
+      { code: "2-1102", name: "Utang Operasional / Vendor", type: "liability" as const, reconcile: false },
+      { code: "3-1101", name: "Aset Bersih Tidak Terikat (Ekuitas)", type: "equity" as const, reconcile: false },
+      { code: "4-1101", name: "Pendapatan SPP Bulanan", type: "income" as const, reconcile: false },
+      { code: "4-1102", name: "Pendapatan Uang Pangkal / PPDB", type: "income" as const, reconcile: false },
+      { code: "4-1201", name: "Pendapatan Denda & Layanan Perpustakaan", type: "income" as const, reconcile: false },
+      { code: "5-1101", name: "Beban Gaji Pokok & Tunjangan Guru", type: "expense" as const, reconcile: false },
+      { code: "5-1102", name: "Beban Honor Jam Mengajar", type: "expense" as const, reconcile: false },
+      { code: "5-1201", name: "Beban Operasional & Pembelajaran", type: "expense" as const, reconcile: false },
+    ];
+
+    const stmts = defaultPsak.map((item) =>
+      db.insert(schema.chartOfAccounts).values({
+        id: generateId("coa"),
+        schoolId,
+        code: item.code,
+        name: item.name,
+        type: item.type,
+        reconcile: item.reconcile,
+        createdAt: new Date(),
+      })
+    );
+
+    await db.batch(stmts as any);
+    return { success: true, count: defaultPsak.length };
   },
 
   async getInvoices(d1: D1Database) {
