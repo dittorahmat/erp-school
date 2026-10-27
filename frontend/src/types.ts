@@ -463,7 +463,7 @@ export interface PurchaseOrder {
   partnerName: string;
   orderDate: string;
   amountTotal: number;
-  status: 'draft' | 'approved' | 'cancelled';
+  status: 'draft' | 'approved' | 'done' | 'cancelled';
   notes?: string | null;
   moveId?: string | null;
   createdAt: number | string;
@@ -509,5 +509,23 @@ export interface AssetDepreciationLine {
   createdAt?: number | string;
 }
 
+export interface VendorBill {
+  id: string;
+  schoolId: string;
+  name: string;
+  date: string;
+  invoiceDueDate?: string | null;
+  moveType: string;
+  partnerName?: string;
+  amountTotal: number;
+  amountResidual: number;
+  state: string;
+  paymentState: string;
+  createdAt: number | string;
+  updatedAt: number | string;
+  lines?: any[];
 }
+
+}
+
 

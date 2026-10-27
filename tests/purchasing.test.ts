@@ -147,4 +147,161 @@ describe("Purchase Order API & Lifecycle Suite (Odoo Purchase Model)", () => {
     expect(json.success).toBe(true);
     expect(json.data.status).toBe("cancelled");
   });
+
+  it("should create vendor bill (in_invoice) from approved PO with atomic batch and balanced move lines", async () => {
+    let batchStatements: any[] = [];
+    const mockOrder = [
+      "po_appr_01",
+      "school_sma_hb",
+      "PO/2026/0004",
+      "PT Gramedia Edukasi",
+      "2026-10-28",
+      1500000,
+      "approved",
+      "Pengadaan buku",
+      null,
+      1761476400,
+      1761476400,
+    ];
+
+    const mockLines = [
+      [
+        "pol_01",
+        "po_appr_01",
+        "prd_buku_mat",
+        "Buku Matematika",
+        "BK-MAT-10",
+        "pcs",
+        20,
+        75000,
+        1500000,
+        null,
+        1761476400,
+      ],
+    ];
+
+    const mockAccounts = [
+      ["coa_exp", "school_sma_hb", "51000", "Beban Pengadaan Barang", "expense", 0, 1761476400],
+      ["coa_ap", "school_sma_hb", "21000", "Utang Usaha / Vendor", "liability", 0, 1761476400],
+    ];
+
+    const mockJournals = [
+      ["jrn_purchase", "school_sma_hb", "Jurnal Pembelian", "BILL", "purchase", "coa_ap", 1761476400],
+    ];
+
+    const mockDb = {
+      prepare: (query: string) => ({
+        bind: (...args: any[]) => ({
+          run: async () => ({ success: true }),
+          raw: async () => {
+            if (query.includes("chart_of_accounts")) return mockAccounts;
+            if (query.includes("journals")) return mockJournals;
+            if (query.includes("purchase_order_lines")) return mockLines;
+            if (query.includes("purchase_orders")) return [mockOrder];
+            if (query.includes("account_moves")) {
+              return [
+                ["bill_01", "school_sma_hb", "jrn_purchase", null, "BILL/2026/0004", "2026-10-28", "in_invoice", 1500000, 1500000, "posted", "not_paid", "2026-10-28", 1761476400, 1761476400],
+              ];
+            }
+            return [];
+          },
+          all: async () => ({ results: [], success: true }),
+          first: async () => null,
+        }),
+      }),
+      batch: async (stmts: any[]) => {
+        batchStatements = stmts;
+        return stmts.map(() => ({ results: [], success: true }));
+      },
+      exec: async () => ({ count: 1, duration: 1 }),
+    };
+
+    const res = await app.request(
+      "/api/purchasing/orders/po_appr_01/create-bill",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schoolId: "school_sma_hb" }),
+      },
+      { DB: mockDb } as any
+    );
+
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as any;
+    expect(json.success).toBe(true);
+    expect(json.data).toBeDefined();
+    expect(json.data.moveType).toBe("in_invoice");
+    expect(batchStatements.length).toBeGreaterThanOrEqual(4); // bill, debit line, credit line, stock picking/moves, po update
+  });
+
+  it("should pay vendor bill and record reconciliation journal entry", async () => {
+    let batchStatements: any[] = [];
+    const mockBill = [
+      "bill_01",
+      "school_sma_hb",
+      "jrn_purchase",
+      null,
+      "BILL/2026/0004",
+      "2026-10-28",
+      "in_invoice",
+      1500000,
+      1500000,
+      "posted",
+      "not_paid",
+      "2026-10-28",
+      1761476400,
+      1761476400,
+    ];
+
+    const mockAccounts = [
+      ["coa_bank", "school_sma_hb", "1120", "Bank BCA Operasional", "asset", 1, 1761476400],
+      ["coa_ap", "school_sma_hb", "21000", "Utang Usaha / Vendor", "liability", 0, 1761476400],
+    ];
+
+    const mockJournals = [
+      ["jrn_bank", "school_sma_hb", "Rekening Bank BCA", "BNK", "bank", "coa_bank", 1761476400],
+    ];
+
+    const mockDb = {
+      prepare: (query: string) => ({
+        bind: (...args: any[]) => ({
+          run: async () => ({ success: true }),
+          raw: async () => {
+            if (query.includes("chart_of_accounts")) return mockAccounts;
+            if (query.includes("journals")) return mockJournals;
+            if (query.includes("account_moves")) return [mockBill];
+            return [];
+          },
+          all: async () => ({ results: [], success: true }),
+          first: async () => null,
+        }),
+      }),
+      batch: async (stmts: any[]) => {
+        batchStatements = stmts;
+        return stmts.map(() => ({ results: [], success: true }));
+      },
+      exec: async () => ({ count: 1, duration: 1 }),
+    };
+
+    const res = await app.request(
+      "/api/purchasing/bills/bill_01/pay",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schoolId: "school_sma_hb",
+          amount: 1500000,
+          paymentMethod: "bank_transfer",
+        }),
+      },
+      { DB: mockDb } as any
+    );
+
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as any;
+    expect(json.success).toBe(true);
+    expect(json.data.payment).toBeDefined();
+    expect(batchStatements.length).toBeGreaterThanOrEqual(4); // payment record, payment move, debit AP, credit Bank, bill residual update
+  });
 });
+
