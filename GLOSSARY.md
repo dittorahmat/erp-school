@@ -89,3 +89,24 @@ Dokumen ini mendefinisikan istilah dan konsep kanonik yang digunakan dalam siste
 - **Payslip (`hr.payslip`)**: Dokumen rincian slip gaji individual seorang pegawai pada periode bulan tertentu, memuat breakdown penghasilan bruto, potongan, dan take-home pay (gaji bersih).
 - **Payslip Batch Run (`hr.payslip.run`)**: Proses kalkulasi dan penerbitan slip gaji massal seluruh guru/staf dalam satu unit sekolah, yang setelah divalidasi akan otomatis mengompilasi dan membukukan transaksi pengeluaran beban gaji (`account.move`) secara atomik ke buku besar.
 
+---
+
+## 13. Pembelajaran Digital & Tugas Mandiri (Assignment & LMS ala OpenEduCat)
+- **Assignment (Tugas Siswa)**: Tugas akademik terstruktur yang diterbitkan guru untuk Classroom dan Subject tertentu, dilengkapi judul, instruksi, bobot nilai, tenggat waktu penyerahan (*due date*), serta lampiran materi pendukung.
+- **Assignment Submission (Pengumpulan Tugas)**: Entitas pengumpulan tugas individual oleh siswa, memuat tanggal serah, tautan/teks submission, status serah (`draft`, `submitted`, `late`, `graded`), catatan feedback guru, serta perolehan skor numerik.
+
+---
+
+## 14. Pengadaan Barang & Tagihan Vendor (Purchase & Vendor Bills ala Odoo `purchase`)
+- **Purchase Order (PO / Pesanan Pembelian)**: Dokumen komitmen pengadaan barang/jasa dari sekolah ke pihak rekanan/suplier (*Partner/Vendor*), memuat baris item barang, kuantitas yang dipesan, harga satuan, dan status alur (`draft`, `approved`, `done`, `cancelled`).
+- **Vendor Bill (`in_invoice` / Tagihan Pemasok)**: Dokumen penagihan resmi dari vendor rekanan atas pengadaan barang/jasa yang diterima sekolah, dibukukan sebagai Journal Entry bertipe `in_invoice` (Debit Beban / Aset / Persediaan, Credit Utang Usaha / *Accounts Payable*).
+- **Vendor Payment (`account.payment`)**: Pembayaran kas/bank dari rekening sekolah kepada suplier yang direkonsiliasi dengan Vendor Bill terbuka.
+
+---
+
+## 15. Manajemen Aset Tetap Sekolah (Asset Management & Depreciation ala Odoo `account.asset`)
+- **Asset Category (Kategori Aset Tetap)**: Kelompok klasifikasi aset tetap sekolah (misal: Komputer Lab, Kendaraan Operasional, Gedung, Peralatan Lab) yang mengonfigurasi masa manfaat (tahun/bulan), metode penyusutan (garis lurus / *straight line*), akun aset, akun akumulasi penyusutan, dan akun beban penyusutan.
+- **Fixed Asset (Aset Tetap Sekolah)**: Rekaman fisik aset spesifik yang dimiliki sekolah, mencakup kode inventaris unik, tanggal perolehan (*gross value*), nilai residu/sisa (*salvage value*), masa manfaat, dan status kepemilikan (`draft`, `running`, `depreciated`, `disposed`).
+- **Depreciation Board / Line (Jadwal Penyusutan)**: Rencana tabel angsuran penyusutan berkala (bulanan/tahunan). Saat diposting, sistem otomatis menerbitkan Journal Entry (`account.move`) Debit Beban Penyusutan dan Credit Akumulasi Penyusutan Aset secara atomik.
+
+
