@@ -79,7 +79,7 @@ export default function App() {
     if (!currentUser) return;
     setLoading(true);
     try {
-      if (currentView === 'students' || currentView === 'dashboard' || currentView === 'attendance' || currentView === 'exams') {
+      if (currentView === 'students' || currentView === 'dashboard' || currentView === 'attendance' || currentView === 'exams' || currentView === 'finance') {
         const res = await fetch('/api/students');
         const json = await res.json();
         setStudents(json.data || []);
@@ -332,6 +332,26 @@ export default function App() {
           })
         });
         if (!res.ok) throw new Error('Gagal menambah produk inventaris');
+      } else if (currentView === 'finance') {
+        const studentId = (form.elements.namedItem('studentId') as HTMLSelectElement).value;
+        const description = (form.elements.namedItem('invDescription') as HTMLInputElement).value;
+        const amountTotal = Number((form.elements.namedItem('invAmount') as HTMLInputElement).value);
+        const date = (form.elements.namedItem('invDate') as HTMLInputElement).value;
+        const dueDate = (form.elements.namedItem('invDueDate') as HTMLInputElement).value;
+
+        const res = await fetch('/api/finance/invoices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schoolId: currentUser.schoolId,
+            studentId,
+            date,
+            dueDate,
+            description,
+            amountTotal
+          })
+        });
+        if (!res.ok) throw new Error('Gagal membuat tagihan siswa');
       }
 
       setActiveModal(null);
@@ -935,6 +955,38 @@ export default function App() {
                       <option value="storable">Barang Stok (Storable)</option>
                       <option value="consumable">Habis Pakai (Consumable)</option>
                     </select>
+                  </div>
+                </>
+              )}
+
+              {currentView === 'finance' && (
+                <>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Pilih Siswa *</label>
+                    <select name="studentId" className="w-full p-2 border rounded bg-white" required defaultValue="">
+                      <option value="" disabled>-- Pilih Siswa --</option>
+                      {students.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.nis})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Deskripsi Tagihan *</label>
+                    <input name="invDescription" type="text" placeholder="e.g. Tagihan SPP Bulan November 2026" className="w-full p-2 border rounded" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Tanggal Tagihan</label>
+                      <input name="invDate" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Jatuh Tempo</label>
+                      <input name="invDueDate" type="date" defaultValue={new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]} className="w-full p-2 border rounded" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Nominal Biaya (Rp) *</label>
+                    <input name="invAmount" type="number" min="1000" step="500" defaultValue="500000" className="w-full p-2 border rounded font-semibold" required />
                   </div>
                 </>
               )}
