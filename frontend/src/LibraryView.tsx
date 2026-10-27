@@ -9,6 +9,7 @@ export default function LibraryView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [barcodeScanInput, setBarcodeScanInput] = useState('');
 
   // Modals
   const [showCatalogModal, setShowCatalogModal] = useState(false);
@@ -233,6 +234,43 @@ export default function LibraryView() {
     setShowReturnModal(true);
   };
 
+  const handleQuickBarcodeScan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const barcode = barcodeScanInput.trim();
+    if (!barcode) return;
+
+    // First check if matching an active issue for immediate return
+    const activeIssue = issuesList.find(
+      (iss) => iss.status === 'issued' && (iss.mediaBarcode === barcode || iss.mediaBarcode?.toLowerCase() === barcode.toLowerCase())
+    );
+
+    if (activeIssue) {
+      openReturnModal(activeIssue);
+      showMsg(`Buku terpinjam ditemukan untuk barcode "${barcode}". Silakan verifikasi kondisi pengembalian.`);
+      setBarcodeScanInput('');
+      return;
+    }
+
+    // Otherwise check catalog for checkout
+    const matchingMedia = mediaList.find(
+      (m) => m.barcode === barcode || m.barcode?.toLowerCase() === barcode.toLowerCase()
+    );
+
+    if (matchingMedia) {
+      if (matchingMedia.status === 'available') {
+        setSelectedMediaId(matchingMedia.id);
+        setShowCheckoutModal(true);
+        showMsg(`Buku "${matchingMedia.name}" (${barcode}) siap dipinjamkan.`);
+      } else {
+        showMsg(`Buku "${matchingMedia.name}" berstatus ${matchingMedia.status}.`, 'error');
+      }
+      setBarcodeScanInput('');
+      return;
+    }
+
+    showMsg(`Barcode "${barcode}" tidak ditemukan di sirkulasi aktif maupun katalog.`, 'error');
+  };
+
   const availableMedia = mediaList.filter((m) => m.status === 'available');
   const activeIssues = issuesList.filter((i) => i.status === 'issued');
 
@@ -284,6 +322,32 @@ export default function LibraryView() {
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Riwayat Sirkulasi</div>
           <div className="text-2xl font-bold text-indigo-600 mt-1">{issuesList.length}</div>
         </div>
+      </div>
+
+      {/* Quick Barcode Scan / Search Bar (#38) */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">SCAN</div>
+          <div>
+            <div className="text-xs font-bold text-slate-800">Quick Barcode Scanner</div>
+            <div className="text-[11px] text-slate-500">Scan atau ketik barcode buku untuk checkout atau pengembalian kilat.</div>
+          </div>
+        </div>
+        <form onSubmit={handleQuickBarcodeScan} className="flex gap-2 w-full md:w-auto">
+          <input
+            type="text"
+            placeholder="Scan barcode buku (e.g. LIB-LP-001)..."
+            value={barcodeScanInput}
+            onChange={(e) => setBarcodeScanInput(e.target.value)}
+            className="w-full md:w-72 px-3 py-1.5 text-xs font-mono bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:border-indigo-500 focus:bg-white"
+          />
+          <button
+            type="submit"
+            className="px-3.5 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition cursor-pointer shrink-0"
+          >
+            Proses Scan
+          </button>
+        </form>
       </div>
 
       {/* Tabs */}

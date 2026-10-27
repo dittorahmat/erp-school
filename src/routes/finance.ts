@@ -1,6 +1,12 @@
 import { Hono } from "hono";
-import { accountingEngine } from "../domain/accounting";
-import { createFeeCategory, listFeeCategories, createFeeStructure, listFeeStructures, generateMonthlyFees } from "../domain/fees";
+import {
+  accountingEngine,
+  createFeeCategory,
+  listFeeCategories,
+  createFeeStructure,
+  listFeeStructures,
+  generateMonthlyFees
+} from "../domain";
 import type { Bindings } from "../index";
 
 export const financeRouter = new Hono<{ Bindings: Bindings }>();

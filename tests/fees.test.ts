@@ -5,7 +5,7 @@ import {
   createFeeStructure,
   listFeeStructures,
   generateMonthlyFees
-} from '../src/domain/fees';
+} from "../src/domain";
 
 describe('Fee Structure & Batch SPP Invoicing Domain (Odoo link)', () => {
   const schoolId = 'sch_test';

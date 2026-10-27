@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { attendanceManagement } from "../domain/attendance";
+import { attendanceManagement } from "../domain";
 import type { Bindings } from "../index";
 
 export const attendanceRouter = new Hono<{ Bindings: Bindings }>();

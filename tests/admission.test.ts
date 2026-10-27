@@ -6,7 +6,7 @@ import {
   listAdmissionApplications,
   updateApplicationStatus,
   admitApplicant
-} from '../src/domain/admission';
+} from "../src/domain";
 
 describe('PPDB / Student Admission Domain (OpenEduCat model)', () => {
   const schoolId = 'sch_test';

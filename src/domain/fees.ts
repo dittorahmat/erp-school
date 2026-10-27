@@ -12,6 +12,7 @@ import {
   chartOfAccounts
 } from '../db/schema';
 import { generateId, compactDefined } from '../lib/utils';
+import { resolveDefaultAccountsAndJournal } from './accounting';
 
 export interface CreateFeeCategoryParams {
   schoolId: string;
@@ -44,11 +45,12 @@ export interface GenerateMonthlyFeesParams {
 
 export const createFeeCategory = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: CreateFeeCategoryParams
 ) => {
   const id = generateId('feecat');
-  await rawDb.batch([
+  const d1 = (rawDb || db) as D1Database;
+  await d1.batch([
     db.insert(feeCategories).values({
       id,
       schoolId: params.schoolId,
@@ -70,12 +72,13 @@ export const listFeeCategories = async (db: any, schoolId: string) => {
 
 export const createFeeStructure = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: CreateFeeStructureParams
 ) => {
   const id = generateId('feestr');
   const now = new Date();
-  await rawDb.batch([
+  const d1 = (rawDb || db) as D1Database;
+  await d1.batch([
     db.insert(feeStructures).values({
       id,
       schoolId: params.schoolId,
@@ -106,9 +109,10 @@ export const listFeeStructures = async (db: any, schoolId: string) => {
 
 export const generateMonthlyFees = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: GenerateMonthlyFeesParams
 ) => {
+  const d1 = (rawDb || db) as D1Database;
   // 1. Get Fee Structure
   const [structure] = await db
     .select()
@@ -117,21 +121,14 @@ export const generateMonthlyFees = async (
   if (!structure) throw new Error('Fee structure not found');
 
   // 2. Resolve default journal & accounts
-  let recAccountId = structure.receivableAccountId;
-  let incAccountId = structure.incomeAccountId;
-
-  const accounts = await db
-    .select()
-    .from(chartOfAccounts)
-    .where(eq(chartOfAccounts.schoolId, params.schoolId));
-  recAccountId = recAccountId || accounts.find((a: any) => a.type === 'asset')?.id || accounts[0]?.id;
-  incAccountId = incAccountId || accounts.find((a: any) => a.type === 'income')?.id || accounts[1]?.id;
-
-  const [saleJournal] = await db
-    .select()
-    .from(journals)
-    .where(eq(journals.schoolId, params.schoolId));
-  const journalId = saleJournal?.id;
+  const { recAccountId, incAccountId, journalId } = await resolveDefaultAccountsAndJournal(
+    db,
+    params.schoolId,
+    {
+      receivableAccountId: structure.receivableAccountId || undefined,
+      incomeAccountId: structure.incomeAccountId || undefined
+    }
+  );
 
   if (!recAccountId || !incAccountId || !journalId) {
     throw new Error('Accounting COA or Journal not properly configured');
@@ -163,11 +160,20 @@ export const generateMonthlyFees = async (
     return { generatedCount: 0, message: 'No eligible active students found' };
   }
 
-  // 4. Check for duplicates in existing moves for this period & structure
+  // 4. Check for duplicates in existing moves for this period & structure directly with SQL where
+  const targetRefs = filteredStudents.map((s: any) => `INV/${params.month}/${s.studentId.slice(-4)}`);
   const existingMoves = await db
-    .select()
+    .select({ name: accountMoves.name, studentId: accountMoves.studentId })
     .from(accountMoves)
-    .where(eq(accountMoves.schoolId, params.schoolId));
+    .where(
+      and(
+        eq(accountMoves.schoolId, params.schoolId),
+        targetRefs.length > 0 ? eq(accountMoves.moveType, 'out_invoice') : undefined
+      )
+    );
+  const existingMoveSet = new Set(
+    (existingMoves || []).map((m: any) => `${m.studentId}_${m.name}`)
+  );
 
   const batchOps: any[] = [];
   let generatedCount = 0;
@@ -177,9 +183,7 @@ export const generateMonthlyFees = async (
     const invoiceRef = `INV/${params.month}/${item.studentId.slice(-4)}`;
     
     // Check duplicate
-    const isDuplicate = existingMoves.some(
-      (m: any) => m.studentId === item.studentId && m.name === invoiceRef
-    );
+    const isDuplicate = existingMoveSet.has(`${item.studentId}_${invoiceRef}`);
     if (isDuplicate) continue;
 
     const moveId = generateId('inv');
@@ -229,7 +233,7 @@ export const generateMonthlyFees = async (
   }
 
   if (batchOps.length > 0) {
-    await rawDb.batch(batchOps);
+    await d1.batch(batchOps);
   }
 
   return {

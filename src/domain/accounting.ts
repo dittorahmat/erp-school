@@ -39,6 +39,48 @@ export interface RecordPaymentParams {
 }
 
 /**
+ * Resolves standard accounts receivable and income accounts, plus default sale journal for a school.
+ */
+export async function resolveDefaultAccountsAndJournal(
+  db: any,
+  schoolId: string,
+  preferred?: { receivableAccountId?: string; incomeAccountId?: string; journalId?: string }
+) {
+  let recAccountId = preferred?.receivableAccountId;
+  let incAccountId = preferred?.incomeAccountId;
+  let journalId = preferred?.journalId;
+
+  if (!recAccountId || !incAccountId) {
+    const allAccounts = await db
+      .select()
+      .from(schema.chartOfAccounts)
+      .where(eq(schema.chartOfAccounts.schoolId, schoolId));
+    recAccountId =
+      recAccountId ||
+      allAccounts.find((a: any) => (a.accountType === 'asset' || a.type === 'asset'))?.id ||
+      allAccounts[0]?.id ||
+      'coa_ar';
+    incAccountId =
+      incAccountId ||
+      allAccounts.find((a: any) => (a.accountType === 'income' || a.type === 'income'))?.id ||
+      allAccounts[1]?.id ||
+      allAccounts[0]?.id ||
+      'coa_rev_other';
+  }
+
+  if (!journalId) {
+    const jrnList = await db
+      .select()
+      .from(schema.journals)
+      .where(eq(schema.journals.schoolId, schoolId));
+    const saleJournal = jrnList.find((j: any) => j.type === 'sale') || jrnList[0];
+    journalId = saleJournal?.id || 'jrn_sale';
+  }
+
+  return { recAccountId, incAccountId, journalId };
+}
+
+/**
  * Deep Accounting Engine Module.
  * Encapsulates double-entry balancing invariants, residual calculations,
  * and Cloudflare D1 atomic batch compilation behind a minimal interface.

@@ -6,7 +6,7 @@ import {
   returnBook,
   markLostBook,
   listLibraryIssues
-} from '../src/domain/library';
+} from "../src/domain";
 
 describe('Library Catalog & Circulation Domain (OpenEduCat / Odoo model)', () => {
   const schoolId = 'sch_01';

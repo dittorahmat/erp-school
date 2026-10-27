@@ -13,6 +13,7 @@ import {
   classrooms
 } from '../db/schema';
 import { generateId, compactDefined } from '../lib/utils';
+import { resolveDefaultAccountsAndJournal } from './accounting';
 
 export interface CreateAdmissionRegisterParams {
   schoolId: string;
@@ -56,12 +57,13 @@ export interface AdmitApplicantParams {
 
 export const createAdmissionRegister = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: CreateAdmissionRegisterParams
 ) => {
   const registerId = generateId('reg');
   const now = new Date();
-  await rawDb.batch([
+  const d1 = (rawDb || db) as D1Database;
+  await d1.batch([
     db.insert(admissionRegisters).values({
       id: registerId,
       schoolId: params.schoolId,
@@ -91,14 +93,15 @@ export const listAdmissionRegisters = async (db: any, schoolId: string) => {
 
 export const submitAdmissionApplication = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: CreateAdmissionApplicationParams
 ) => {
   const appId = generateId('app');
   const appNumber = `PPDB-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 900 + 100)}`;
   const now = new Date();
+  const d1 = (rawDb || db) as D1Database;
 
-  await rawDb.batch([
+  await d1.batch([
     db.insert(admissionApplications).values({
       id: appId,
       registerId: params.registerId,
@@ -133,12 +136,13 @@ export const listAdmissionApplications = async (db: any, registerId: string) => 
 
 export const updateApplicationStatus = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   applicationId: string,
   status: 'verified' | 'approved' | 'rejected'
 ) => {
   const now = new Date();
-  await rawDb.batch([
+  const d1 = (rawDb || db) as D1Database;
+  await d1.batch([
     db.update(admissionApplications)
       .set({ status, updatedAt: now })
       .where(eq(admissionApplications.id, applicationId))
@@ -148,9 +152,10 @@ export const updateApplicationStatus = async (
 
 export const admitApplicant = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: AdmitApplicantParams
 ) => {
+  const d1 = (rawDb || db) as D1Database;
   // 1. Fetch application & register
   const [app] = await db
     .select()
@@ -221,24 +226,12 @@ export const admitApplicant = async (
     const invoiceNumber = `INV/PPDB/${Date.now().toString().slice(-6)}`;
     const feeAmount = register.admissionFee;
 
-    let recAccId = params.receivableAccountId;
-    let incAccId = params.incomeAccountId;
-    let jrnId = params.journalId;
-
-    if (!recAccId || !incAccId || !jrnId) {
-      const allAccounts = await db
-        .select()
-        .from(chartOfAccounts)
-        .where(eq(chartOfAccounts.schoolId, params.schoolId));
-      recAccId = recAccId || allAccounts.find((a: any) => a.type === 'asset')?.id || allAccounts[0]?.id;
-      incAccId = incAccId || allAccounts.find((a: any) => a.type === 'income')?.id || allAccounts[1]?.id;
-
-      const [defJournal] = await db
-        .select()
-        .from(journals)
-        .where(eq(journals.schoolId, params.schoolId));
-      jrnId = jrnId || defJournal?.id;
-    }
+    const { recAccountId: recAccId, incAccountId: incAccId, journalId: jrnId } =
+      await resolveDefaultAccountsAndJournal(db, params.schoolId, {
+        receivableAccountId: params.receivableAccountId,
+        incomeAccountId: params.incomeAccountId,
+        journalId: params.journalId
+      });
 
     if (recAccId && incAccId && jrnId) {
       batchOperations.push(
@@ -284,7 +277,7 @@ export const admitApplicant = async (
   }
 
   // Atomically commit in single D1 batch
-  await rawDb.batch(batchOperations);
+  await d1.batch(batchOperations);
 
   return {
     success: true,

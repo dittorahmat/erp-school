@@ -6,7 +6,7 @@ import {
   listAdmissionApplications,
   updateApplicationStatus,
   admitApplicant
-} from '../domain/admission';
+} from '../domain';
 
 type Bindings = {
   DB: D1Database;

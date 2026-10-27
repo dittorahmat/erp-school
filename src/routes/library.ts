@@ -6,7 +6,7 @@ import {
   returnBook,
   markLostBook,
   listLibraryIssues
-} from '../domain/library';
+} from '../domain';
 import type { Bindings } from '../index';
 
 export const libraryRouter = new Hono<{ Bindings: Bindings }>();

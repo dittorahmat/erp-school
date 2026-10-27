@@ -135,6 +135,9 @@ describe("Portal Domain & Row-Level Security (RLS) Guardrail (#37)", () => {
     expect(portalManagement.assertPortalAccess(jokoScope, "std_andi")).toBe("std_andi");
     // Joko can access Erik
     expect(portalManagement.assertPortalAccess(jokoScope, "std_erik")).toBe("std_erik");
+    // If targetStudentId is omitted or null, default safely to the first linked child
+    expect(portalManagement.assertPortalAccess(jokoScope, null)).toBe("std_andi");
+    expect(portalManagement.assertPortalAccess(jokoScope, undefined)).toBe("std_andi");
 
     // Joko CANNOT access Bella (daughter of Susanto)
     expect(() => {

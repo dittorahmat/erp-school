@@ -14,6 +14,7 @@ import {
   chartOfAccounts
 } from '../db/schema';
 import { generateId, compactDefined } from '../lib/utils';
+import { resolveDefaultAccountsAndJournal } from './accounting';
 
 export interface CreateLibraryMediaParams {
   schoolId: string;
@@ -60,7 +61,7 @@ export interface MarkLostBookParams {
 
 export const catalogMedia = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: CreateLibraryMediaParams
 ) => {
   const productId = generateId('prod');
@@ -97,7 +98,8 @@ export const catalogMedia = async (
     updatedAt: now
   };
 
-  await rawDb.batch([
+  const d1 = (rawDb || db) as D1Database;
+  await d1.batch([
     db.insert(products).values(productData),
     db.insert(libraryMedia).values(mediaData)
   ]);
@@ -146,7 +148,7 @@ export const listLibraryMedia = async (db: any, schoolId: string, search?: strin
 
 export const issueBook = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: IssueBookParams
 ) => {
   const maxLoans = params.maxActiveLoans ?? 3;
@@ -248,13 +250,14 @@ export const issueBook = async (
     );
   }
 
-  await rawDb.batch(statements as [any, ...any[]]);
+  const d1 = (rawDb || db) as D1Database;
+  await d1.batch(statements as [any, ...any[]]);
   return issueData;
 };
 
 export const returnBook = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: ReturnBookParams
 ) => {
   const issueRows = await db
@@ -301,13 +304,9 @@ export const returnBook = async (
     fineInvoiceId = generateId('inv');
 
     // Resolve COA & Journal
-    const jrnList = await db.select().from(journals).where(eq(journals.schoolId, params.schoolId));
-    const saleJournal = jrnList.find((j: any) => j.type === 'sale') || jrnList[0];
-    const journalId = saleJournal ? saleJournal.id : 'jrn_sale';
-
-    const coaList = await db.select().from(chartOfAccounts).where(eq(chartOfAccounts.schoolId, params.schoolId));
-    const recAcc = coaList.find((a: any) => a.accountType === 'asset' && a.code.startsWith('112')) || coaList[0];
-    const incAcc = coaList.find((a: any) => a.accountType === 'income' && a.code.startsWith('41')) || coaList[1] || coaList[0];
+    const { recAccountId, incAccountId, journalId } = await resolveDefaultAccountsAndJournal(db, params.schoolId);
+    const recAcc = { id: recAccountId };
+    const incAcc = { id: incAccountId };
 
     const move = {
       id: fineInvoiceId,
@@ -407,7 +406,8 @@ export const returnBook = async (
     }).where(eq(libraryMedia.id, issue.mediaId))
   );
 
-  await rawDb.batch(statements as [any, ...any[]]);
+  const d1 = (rawDb || db) as D1Database;
+  await d1.batch(statements as [any, ...any[]]);
 
   return {
     issueId: params.issueId,
@@ -420,7 +420,7 @@ export const returnBook = async (
 
 export const markLostBook = async (
   db: any,
-  rawDb: D1Database,
+  rawDb: D1Database | undefined,
   params: MarkLostBookParams
 ) => {
   const issueRows = await db
@@ -447,13 +447,9 @@ export const markLostBook = async (
   const dateStr = now.toISOString().split('T')[0];
   const replacementCost = params.replacementCost ?? (media?.listPrice || media?.standardPrice || 100000);
 
-  const jrnList = await db.select().from(journals).where(eq(journals.schoolId, params.schoolId));
-  const saleJournal = jrnList.find((j: any) => j.type === 'sale') || jrnList[0];
-  const journalId = saleJournal ? saleJournal.id : 'jrn_sale';
-
-  const coaList = await db.select().from(chartOfAccounts).where(eq(chartOfAccounts.schoolId, params.schoolId));
-  const recAcc = coaList.find((a: any) => a.accountType === 'asset' && a.code.startsWith('112')) || coaList[0];
-  const incAcc = coaList.find((a: any) => a.accountType === 'income' && a.code.startsWith('41')) || coaList[1] || coaList[0];
+  const { recAccountId, incAccountId, journalId } = await resolveDefaultAccountsAndJournal(db, params.schoolId);
+  const recAcc = { id: recAccountId };
+  const incAcc = { id: incAccountId };
 
   const fineInvoiceId = generateId('inv');
 
@@ -551,7 +547,8 @@ export const markLostBook = async (
     );
   }
 
-  await rawDb.batch(statements as [any, ...any[]]);
+  const d1 = (rawDb || db) as D1Database;
+  await d1.batch(statements as [any, ...any[]]);
 
   return {
     issueId: params.issueId,

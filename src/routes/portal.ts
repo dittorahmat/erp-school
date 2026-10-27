@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { portalManagement } from "../domain/portal";
+import { portalManagement } from "../domain";
 import type { Bindings } from "../index";
 
 export const portalRouter = new Hono<{ Bindings: Bindings }>();
