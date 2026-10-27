@@ -56,6 +56,9 @@ describe("Architecture Boundary Guardrail", () => {
     expect(content).toContain('from "./fees"');
     expect(content).toContain('from "./library"');
     expect(content).toContain('from "./portal"');
+    expect(content).toContain('from "./lms"');
+    expect(content).toContain('from "./purchasing"');
+    expect(content).toContain('from "./assets"');
   });
 
   it("should enforce client-side domain isolation: frontend must not generate document sequence numbers or hardcode COA accounts", () => {

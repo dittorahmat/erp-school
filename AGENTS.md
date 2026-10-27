@@ -44,6 +44,10 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Frontend SPA berbasis **React + Vite** di folder `frontend/` menyajikan UI type-safe yang terkompilasi ke `dist/client`.
   - Cloudflare Workers Static Assets binding (`assets: { directory: "./dist/client", html_handling: "single-page-application", not_found_handling: "single-page-application" }`) wajib dikonfigurasi di `wrangler.jsonc` untuk menyajikan SPA secara native tanpa CORS.
   - Seluruh tombol create/modal WAJIB merender form fungsional nyata ke API D1; dilarang keras menaruh fallback nama/data hardcoded (e.g. ternary fallback dummy string).
+- **Multi-Tenant Isolation & Zero Hardcoded Fallbacks**:
+  - Dilarang keras menaruh fallback ID tenant/sekolah statis (seperti `|| 'sch_smp_01'`) di dalam modul domain maupun route handlers. Setiap query dan mutasi data WAJIB menerima `schoolId` yang divalidasi dari context/request (query parameter, session auth, atau header `x-school-id`).
+- **Konsistensi Siklus Jadwal Tanggal & Depresiasi**:
+  - Kalkulasi periodik (seperti jadwal depresiasi aset atau tagihan SPP berkala) WAJIB menghitung periode berjalan mulai dari tanggal perolehan/pembelian (*purchase month*) secara akurat dan tidak melompati bulan pertama.
 - **Pemeriksaan & Build Wajib**:
   - Wajib jalankan `npm run build`, `npm run typecheck`, dan `npm run test` sebelum commit atau merge ke `main`.
   - Kolom SQL D1 wajib berformat `snake_case`, cocokkan dengan pemetaan `drizzle-orm` di `src/db/schema.ts`.

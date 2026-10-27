@@ -403,3 +403,127 @@ export interface PayslipBatchRun {
   status: 'draft' | 'confirmed';
   createdAt: number | string;
 }
+
+export interface Assignment {
+  id: string;
+  schoolId: string;
+  classroomId: string;
+  classroomName?: string;
+  subjectId: string;
+  subjectName?: string;
+  facultyId: string;
+  facultyName?: string;
+  examSessionId?: string | null;
+  title: string;
+  description: string;
+  dueDate: string;
+  maxScore: number;
+  weightage?: number;
+  status: 'draft' | 'published' | 'closed';
+  createdAt?: string | number;
+  submission?: AssignmentSubmission | null;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  schoolId?: string;
+  assignmentId: string;
+  studentId: string;
+  studentName?: string;
+  studentNis?: string;
+  submissionDate: string;
+  content: string;
+  fileUrl?: string | null;
+  score?: number | null;
+  grade?: string | null;
+  feedback?: string | null;
+  status: 'submitted' | 'graded' | 'late' | 'resubmit';
+  createdAt?: string | number;
+  updatedAt?: string | number;
+}
+
+export interface PurchaseOrderLine {
+  id: string;
+  orderId: string;
+  productId: string;
+  productName?: string;
+  productCode?: string;
+  uom?: string;
+  productQty: number;
+  priceUnit: number;
+  subtotal: number;
+  notes?: string | null;
+  createdAt?: number | string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  schoolId: string;
+  name: string;
+  partnerName: string;
+  orderDate: string;
+  amountTotal: number;
+  status: 'draft' | 'approved' | 'done' | 'cancelled';
+  notes?: string | null;
+  moveId?: string | null;
+  createdAt: number | string;
+  updatedAt: number | string;
+  lines?: PurchaseOrderLine[];
+}
+
+export interface FixedAsset {
+  id: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  category: 'equipment' | 'vehicle' | 'building' | 'electronic';
+  purchaseDate: string;
+  purchaseValue: number;
+  salvageValue: number;
+  depreciableValue: number;
+  method: string;
+  durationMonths: number;
+  assetAccountId: string;
+  depreciationAccountId: string;
+  expenseAccountId: string;
+  journalId: string;
+  status: 'draft' | 'running' | 'depreciated' | 'disposed';
+  notes?: string | null;
+  createdAt?: number | string;
+  lines?: AssetDepreciationLine[];
+}
+
+export interface AssetDepreciationLine {
+  id: string;
+  assetId: string;
+  schoolId: string;
+  sequence: number;
+  depreciationDate: string;
+  amount: number;
+  accumulatedAmount: number;
+  remainingValue: number;
+  status: 'draft' | 'posted' | 'cancelled';
+  moveId?: string | null;
+  assetName?: string;
+  assetCode?: string;
+  createdAt?: number | string;
+}
+
+export interface VendorBill {
+  id: string;
+  schoolId: string;
+  name: string;
+  date: string;
+  invoiceDueDate?: string | null;
+  moveType: string;
+  partnerName?: string;
+  amountTotal: number;
+  amountResidual: number;
+  state: string;
+  paymentState: string;
+  createdAt: number | string;
+  updatedAt: number | string;
+  lines?: any[];
+}
+
+

@@ -11,6 +11,9 @@ import admissionRouter from "./routes/admission";
 import { libraryRouter } from "./routes/library";
 import { portalRouter } from "./routes/portal";
 import { payrollRouter } from "./routes/payroll";
+import { lmsRouter } from "./routes/lms";
+import { purchasingRouter } from "./routes/purchasing";
+import { assetRouter } from "./routes/assets";
 import { odooShellHtml } from "./views/shell";
 
 export type Bindings = {
@@ -36,6 +39,9 @@ app.route("/api/admission", admissionRouter);
 app.route("/api/library", libraryRouter);
 app.route("/api/portal", portalRouter);
 app.route("/api/payroll", payrollRouter);
+app.route("/api/lms", lmsRouter);
+app.route("/api/purchasing", purchasingRouter);
+app.route("/api/assets", assetRouter);
 
 // Healthcheck
 app.get("/api/health", (c) => {

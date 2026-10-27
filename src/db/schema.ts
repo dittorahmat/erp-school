@@ -571,3 +571,107 @@ export const payslips = sqliteTable('payslips', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
 
+// --------------------------------------------------------------------------
+// Assignment & LMS (OpenEduCat op.assignment & op.assignment.submission style)
+// --------------------------------------------------------------------------
+export const assignments = sqliteTable('assignments', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  classroomId: text('classroom_id').notNull().references(() => classrooms.id),
+  subjectId: text('subject_id').notNull().references(() => subjects.id),
+  facultyId: text('faculty_id').notNull().references(() => faculties.id),
+  examSessionId: text('exam_session_id').references(() => examSessions.id),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  dueDate: text('due_date').notNull(), // ISO Date or YYYY-MM-DD
+  maxScore: real('max_score').notNull().default(100),
+  weightage: integer('weightage').default(10), // e.g. 10%
+  status: text('status').notNull().default('published'), // draft, published, closed
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const assignmentSubmissions = sqliteTable('assignment_submissions', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  assignmentId: text('assignment_id').notNull().references(() => assignments.id, { onDelete: 'cascade' }),
+  studentId: text('student_id').notNull().references(() => students.id),
+  submissionDate: text('submission_date').notNull(),
+  content: text('content').notNull(), // text response or notes
+  fileUrl: text('file_url'), // Link / Cloudflare R2 file URL
+  score: real('score'),
+  grade: text('grade'), // A, B, C, D
+  feedback: text('feedback'),
+  status: text('status').notNull().default('submitted'), // submitted, graded, late, resubmit
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+// --------------------------------------------------------------------------
+// Purchase Orders & Lines (Odoo Purchase Model)
+// --------------------------------------------------------------------------
+export const purchaseOrders = sqliteTable('purchase_orders', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // e.g. "PO/2026/0001"
+  partnerName: text('partner_name').notNull(), // Vendor / Rekanan name, e.g. "PT Gramedia Edukasi"
+  orderDate: text('order_date').notNull(), // "2026-10-28"
+  amountTotal: real('amount_total').notNull().default(0),
+  status: text('status').notNull().default('draft'), // draft, approved, cancelled
+  notes: text('notes'),
+  moveId: text('move_id').references(() => accountMoves.id), // Link to vendor bill (in_invoice)
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const purchaseOrderLines = sqliteTable('purchase_order_lines', {
+  id: text('id').primaryKey(),
+  orderId: text('order_id').notNull().references(() => purchaseOrders.id, { onDelete: 'cascade' }),
+  productId: text('product_id').notNull().references(() => products.id),
+  productQty: real('product_qty').notNull().default(1),
+  priceUnit: real('price_unit').notNull().default(0),
+  subtotal: real('subtotal').notNull().default(0),
+  notes: text('notes'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
+// --------------------------------------------------------------------------
+// Fixed Asset Management & Straight-Line Depreciation (Odoo account.asset)
+// --------------------------------------------------------------------------
+export const fixedAssets = sqliteTable('fixed_assets', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // e.g. "Server Lab Komputer Dell EMC"
+  code: text('code').notNull().unique(), // e.g. "AST-SRV-001"
+  category: text('category').notNull().default('equipment'), // equipment, vehicle, building, electronic
+  purchaseDate: text('purchase_date').notNull(), // YYYY-MM-DD
+  purchaseValue: real('purchase_value').notNull(), // Harga perolehan
+  salvageValue: real('salvage_value').notNull().default(0), // Nilai residu
+  depreciableValue: real('depreciable_value').notNull(), // purchase_value - salvage_value
+  method: text('method').notNull().default('straight_line'), // straight_line
+  durationMonths: integer('duration_months').notNull(), // Masa manfaat dalam bulan (e.g. 48)
+  assetAccountId: text('asset_account_id').notNull().references(() => chartOfAccounts.id), // Akun Aset Tetap
+  depreciationAccountId: text('depreciation_account_id').notNull().references(() => chartOfAccounts.id), // Akun Akumulasi Penyusutan
+  expenseAccountId: text('expense_account_id').notNull().references(() => chartOfAccounts.id), // Akun Beban Penyusutan
+  journalId: text('journal_id').notNull().references(() => journals.id), // Jurnal Umum / Misc
+  status: text('status').notNull().default('draft'), // draft, running, depreciated, disposed
+  notes: text('notes'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const assetDepreciationLines = sqliteTable('asset_depreciation_lines', {
+  id: text('id').primaryKey(),
+  assetId: text('asset_id').notNull().references(() => fixedAssets.id, { onDelete: 'cascade' }),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  sequence: integer('sequence').notNull(), // Periode ke-1, 2, ... N
+  depreciationDate: text('depreciation_date').notNull(), // YYYY-MM-DD
+  amount: real('amount').notNull(), // Angsuran penyusutan bulan ini
+  accumulatedAmount: real('accumulated_amount').notNull(), // Akumulasi penyusutan hingga periode ini
+  remainingValue: real('remaining_value').notNull(), // Nilai buku tersisa setelah penyusutan
+  status: text('status').notNull().default('draft'), // draft, posted, cancelled
+  moveId: text('move_id').references(() => accountMoves.id), // Journal Entry ID ketika diposting
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
