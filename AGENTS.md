@@ -21,15 +21,11 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - **MANDAT KETAT**: Implement YAGNI, prefer one liner solutions. Hindari over-engineering, abstraksi berlebihan yang belum diperlukan, dan duplikasi kode antar modul. Gunakan utilitas satu baris terpusat (seperti di `src/lib/utils.ts`).
 - **Cloudflare D1 Multi-Statement Operations (Atomic Batching)**:
   - Setiap operasi penulisan relasional header + items/lines (misalnya invoice header + move lines, presensi sheet + attendance lines, stock picking + stock moves) **WAJIB menggunakan `await db.batch([...])`** dalam satu roundtrip ke D1, dilarang melakukan multiple inserts berurutan secara terpisah.
-- **Canonical D1 Parameter Signature & Types**:
-  - **MANDAT KETAT**: Seluruh fungsi di modul domain (`src/domain/*`) WAJIB menerima canonical `db: D1Database | any` (dan optional `rawDb?: D1Database`) serta strongly-typed parameter interface.
-  - Dilarang membocorkan loose signature seperti `(db: any, rawDb: D1Database)` yang memaksa adapter route memisahkan atau membungkus D1 context secara redundan.
-- **Mandatory Use of Single Seam Index (`../domain`)**:
-  - **MANDAT KETAT**: Seluruh route handlers HTTP (`src/routes/*`) WAJIB mengimpor domain symbols secara strictly terpusat dari single seam index `../domain` (bukan `../domain/admission`, `../domain/fees`, atau file modular parsial lainnya).
-- **Multi-Child Guardian Fallback in Portal Queries**:
-  - Jika seorang wali murid (guardian) memiliki beberapa anak terkait dan `targetStudentId` tidak dispesifikasikan dalam query parameter, domain `assertPortalAccess` dan router portal WAJIB secara aman fallback ke anak pertama yang terhubung (`scope.studentIds[0]`) tanpa melempar HTTP 403 Forbidden.
-- **Invoicing Preview Requirement Before Batch Postings**:
-  - Seluruh alur batch fee invoicing di frontend WAJIB menyajikan tahapan pratinjau (preview modal / confirmation dialog) yang menampilkan jumlah siswa eligible teridentifikasi dan total estimasi nominal rupiah sebelum mengeksekusi operasi posting ke D1 database.
+- **Deep Modules & Clean Seams (Anti Shallow Controllers)**:
+  - **MANDAT KETAT**: Route handlers HTTP (`src/routes/`) WAJIB berupa adapter tipis (thin HTTP adapters). Seluruh aturan bisnis, invarian balancing (debit = credit), kompilasi batch relasional D1, kalkulasi agregat/tally, dan validasi status WAJIB berada di dalam **Deep Domain Modules** (`src/domain/`).
+  - Dilarang keras mengimpor `drizzle-orm/d1` langsung di dalam file `src/routes/*`. Seluruh interaksi database harus didelegasikan ke modul `src/domain/*`.
+  - Seluruh route handlers HTTP (`src/routes/*`) WAJIB mengimpor domain symbols secara strictly terpusat dari single seam index `../domain`. Guardrail ini ditegakkan secara mekanis via `tests/architecture-guardrail.test.ts`.
+  - Seluruh modul domain WAJIB diekspor terpusat melalui `src/domain/index.ts` sebagai single seam index.
 - **Wajib Audit Anti-AI-Slop via `design-taste-frontend`**:
   - **MANDAT KETAT**: Setiap penambahan, pembaruan, atau refactoring komponen dan antarmuka frontend (`src/views/`, layout HTML, styling CSS) **WAJIB diaudit menggunakan skill `design-taste-frontend`** (`node <skill>/scripts/inspect.mjs --app <url>`).
   - Dilarang keras membiarkan pola AI-slop template generik:
@@ -43,11 +39,6 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Setiap view / tab / menu WAJIB terhubung secara dinamis via API (`fetch('/api/...')`) ke database Cloudflare D1.
   - Setiap modal atau form create WAJIB melakukan `fetch('/api/...', { method: 'POST' })` nyata untuk persistensi data ke D1.
   - Setiap menu navigasi, tombol buat baru, filter, aksi baris tabel, dan avatar profil WAJIB memiliki event handler interaktif yang berfungsi (termasuk fitur logout dan switch account).
-- **Deep Modules & Clean Seams (Anti Shallow Controllers)**:
-  - **MANDAT KETAT**: Route handlers HTTP (`src/routes/`) WAJIB berupa adapter tipis (thin HTTP adapters). Seluruh aturan bisnis, invarian balancing (debit = credit), kompilasi batch relasional D1, kalkulasi agregat/tally, dan validasi status WAJIB berada di dalam **Deep Domain Modules** (`src/domain/`).
-  - Dilarang keras mengimpor `drizzle-orm/d1` langsung di dalam file `src/routes/*`. Seluruh interaksi database harus didelegasikan ke modul `src/domain/*`. Guardrail ini ditegakkan secara mekanis via `tests/architecture-guardrail.test.ts`.
-  - Seluruh modul domain WAJIB diekspor terpusat melalui `src/domain/index.ts` sebagai single seam index.
-  - Setiap modul domain harus lolos *deletion test* dan dapat diuji secara langsung (*the interface is the test surface*) tanpa harus membungkus atau menguji via lapisan request HTTP router.
 - **Arsitektur Pemisahan Kode UI & React Monolith Guardrail**:
   - Dilarang menumpuk ribuan baris HTML/JS interaktif di dalam template literal file server (`src/index.ts`).
   - Frontend SPA berbasis **React + Vite** di folder `frontend/` menyajikan UI type-safe yang terkompilasi ke `dist/client`.
@@ -57,13 +48,5 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Wajib jalankan `npm run build`, `npm run typecheck`, dan `npm run test` sebelum commit atau merge ke `main`.
   - Kolom SQL D1 wajib berformat `snake_case`, cocokkan dengan pemetaan `drizzle-orm` di `src/db/schema.ts`.
   - Transaksi akuntansi wajib berimbang Debit = Credit (`/api/finance/trial-balance`).
-  - Deploy live Cloudflare Workers menggunakan `npm run deploy` via Wrangler.
-- **UI State Lookup Standard**:
-  - **MANDAT KETAT**: Dilarang keras mengoper entire stale object ke dalam state setter (`handleEdit(item)`).
-  - Wajib mengoper ID item saja (`handleEdit(item.id)`) dan mengambil datanya dari state list atau query API berdasarkan ID.
-- **HTML Date Inputs**:
-  - Seluruh input form tanggal wajib menggunakan native `<input type="date">` untuk menjamin format ISO 8601 YYYY-MM-DD yang valid dan konsisten.
-- **Domain Type Safety**:
-  - Seluruh metode operasi create/update di domain module (`src/domain/*`) WAJIB memiliki parameter interface bertipe kuat (strongly typed), dilarang menggunakan `body: any` atau `data: any`. Gunakan utilitas compacting (`compactDefined`) untuk pembaruan parsial yang bersih tanpa boilerplate `if (x !== undefined)`.
-- **Client-Side Domain Isolation & Data Completeness**:
-  - Seluruh aturan isolasi domain frontend, penomoran dokumen di backend, dynamic tenant sourcing, dan data fetching completeness: **lihat `CODING_STANDARDS.md` §7**.
+- **Domain Integration & Client Rules Pointer**:
+  - Untuk aturan lengkap mengenai canonical parameter domain module, multi-child portal fallback, preview batch invoicing, dan isolasi domain frontend: **lihat `CODING_STANDARDS.md` §7 & §8**.
