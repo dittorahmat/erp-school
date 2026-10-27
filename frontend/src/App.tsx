@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LoginView from './LoginView';
 import AdmissionView from './AdmissionView';
+import LibraryView from './LibraryView';
 import {
   DEMO_USERS,
   UserProfile,
@@ -404,7 +405,7 @@ export default function App() {
             <i className="fa-solid fa-graduation-cap"></i> ERP Sekolah
           </span>
           <nav className="hidden md:flex space-x-1 text-xs pl-3 overflow-x-auto">
-            {['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory'].map((view) => (
+            {['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory', 'library'].map((view) => (
               <button
                 key={view}
                 onClick={() => setCurrentView(view)}
@@ -412,7 +413,7 @@ export default function App() {
                   currentView === view ? 'bg-[#583950] font-semibold' : 'hover:bg-[#583950]'
                 }`}
               >
-                {view === 'admission' ? 'PPDB' : view === 'academics' ? 'Akademik' : view === 'attendance' ? 'Presensi' : view === 'exams' ? 'Ujian & Nilai' : view === 'finance' ? 'Keuangan (SPP)' : view === 'inventory' ? 'Inventaris' : view === 'students' ? 'Siswa' : 'Dashboard'}
+                {view === 'admission' ? 'PPDB' : view === 'academics' ? 'Akademik' : view === 'attendance' ? 'Presensi' : view === 'exams' ? 'Ujian & Nilai' : view === 'finance' ? 'Keuangan (SPP)' : view === 'inventory' ? 'Inventaris' : view === 'library' ? 'Perpustakaan' : view === 'students' ? 'Siswa' : 'Dashboard'}
               </button>
             ))}
           </nav>
@@ -504,6 +505,7 @@ export default function App() {
         ) : (
           <>
             {currentView === 'admission' && <AdmissionView />}
+            {currentView === 'library' && <LibraryView />}
 
             {currentView === 'dashboard' && (
               <div className="space-y-6">

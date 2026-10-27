@@ -468,3 +468,39 @@ export const feeStructures = sqliteTable('fee_structures', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
+
+// --------------------------------------------------------------------------
+// Library Catalog & Circulation (OpenEduCat & Odoo Model)
+// --------------------------------------------------------------------------
+export const libraryMedia = sqliteTable('library_media', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  productId: text('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  isbn: text('isbn'),
+  author: text('author').notNull(),
+  publisher: text('publisher'),
+  edition: text('edition'),
+  subjectId: text('subject_id').references(() => subjects.id),
+  shelfLocation: text('shelf_location'), // e.g. "Rak A-02", "Section 3"
+  barcode: text('barcode').notNull().unique(),
+  status: text('status').notNull().default('available'), // available, issued, lost, maintenance
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const libraryIssues = sqliteTable('library_issues', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  mediaId: text('media_id').notNull().references(() => libraryMedia.id),
+  studentId: text('student_id').notNull().references(() => students.id),
+  issueDate: text('issue_date').notNull(),
+  dueDate: text('due_date').notNull(),
+  returnDate: text('return_date'),
+  condition: text('condition').notNull().default('good'), // good, damaged, lost
+  status: text('status').notNull().default('issued'), // issued, returned, lost
+  fineAmount: real('fine_amount').default(0),
+  fineInvoiceId: text('fine_invoice_id').references(() => accountMoves.id),
+  notes: text('notes'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});

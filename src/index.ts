@@ -8,6 +8,7 @@ import { examRouter } from "./routes/exams";
 import { financeRouter } from "./routes/finance";
 import { inventoryRouter } from "./routes/inventory";
 import admissionRouter from "./routes/admission";
+import { libraryRouter } from "./routes/library";
 import { odooShellHtml } from "./views/shell";
 
 export type Bindings = {
@@ -30,6 +31,7 @@ app.route("/api/exams", examRouter);
 app.route("/api/finance", financeRouter);
 app.route("/api/inventory", inventoryRouter);
 app.route("/api/admission", admissionRouter);
+app.route("/api/library", libraryRouter);
 
 // Healthcheck
 app.get("/api/health", (c) => {
