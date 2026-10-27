@@ -76,7 +76,7 @@ export interface ExamSession {
   totalMarks: number;
   passingMarks: number;
   weightage: number;
-  status: 'draft' | 'published' | 'closed';
+  status: string;
 }
 
 export interface Invoice {
@@ -90,27 +90,36 @@ export interface Invoice {
   amountTotal: number;
   amountResidual: number;
   state: string;
-  paymentState: 'not_paid' | 'paid' | 'partial';
+  paymentState: string;
   invoiceDueDate?: string | null;
 }
 
 export interface InventoryProduct {
   id: string;
-  schoolId: string;
   name: string;
   code: string;
-  type: 'storable' | 'consumable' | 'service' | 'asset';
+  type: 'storable' | 'consumable' | 'asset';
   uom: string;
-  listPrice?: number;
-  standardPrice?: number;
+  listPrice: number;
+  standardPrice: number;
   serialNumber?: string | null;
 }
 
+export interface TrialBalanceItem {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
 export interface TrialBalanceReport {
+  isBalanced: boolean;
   totalDebit: number;
   totalCredit: number;
-  isBalanced: boolean;
-  lineCount: number;
+  data: TrialBalanceItem[];
 }
 
 export interface ReportCardGrade {
@@ -119,8 +128,9 @@ export interface ReportCardGrade {
   studentId: string;
   marksObtained: number;
   grade: string;
-  remark?: string | null;
-  subjectName?: string;
+  remark: string | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface ReportCardResponse {
@@ -129,23 +139,23 @@ export interface ReportCardResponse {
   term: string;
   summary: {
     totalSubjects: number;
-    averageScore: string | number;
+    averageScore: string;
   };
   grades: ReportCardGrade[];
 }
 
 export const DEMO_USERS: Record<string, UserProfile> = {
   admin: {
-    name: 'Bambang Sudarmono, M.Pd',
+    name: 'Dra. Hj. Siti Nurhaliza, M.Pd',
     role: 'superadmin',
-    email: 'admin@sekolah.demo',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
+    email: 'admin.siti@sekolah.demo',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100'
   },
   finance: {
-    name: 'Siti Rahmawati, S.E',
+    name: 'Ahmad Fauzi, S.E.',
     role: 'accountant',
-    email: 'finance@sekolah.demo',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100'
+    email: 'keuangan.fauzi@sekolah.demo',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100'
   },
   teacher: {
     name: 'Budi Santoso, S.Pd',
@@ -219,4 +229,67 @@ export interface FeeStructure {
   code: string;
   amount: number;
   interval: string;
+}
+
+// --------------------------------------------------------------------------
+// Self-Service Portal Types
+// --------------------------------------------------------------------------
+export interface PortalStudentInfo {
+  id: string;
+  nis: string;
+  nisn: string;
+  name: string;
+  gender: string;
+  classroomName?: string;
+}
+
+export interface PortalTimetableItem {
+  id: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  subjectName: string;
+  subjectCode: string;
+  facultyName: string;
+}
+
+export interface PortalAttendanceItem {
+  id: string;
+  date: string;
+  status: string;
+  remark?: string | null;
+  classroomId: string;
+}
+
+export interface PortalGradeItem {
+  id: string;
+  marksObtained: number;
+  grade: string;
+  remark?: string | null;
+  examName: string;
+  examDate: string;
+  totalMarks: number;
+  passingMarks: number;
+  weightage: number;
+  subjectName: string;
+}
+
+export interface PortalInvoiceItem {
+  id: string;
+  name: string;
+  date: string;
+  amountTotal: number;
+  amountResidual: number;
+  state: string;
+  paymentState: string;
+  invoiceDueDate?: string | null;
+}
+
+export interface PortalOverviewResponse {
+  students: PortalStudentInfo[];
+  selectedStudentId: string | null;
+  timetables: PortalTimetableItem[];
+  attendance: PortalAttendanceItem[];
+  grades: PortalGradeItem[];
+  invoices: PortalInvoiceItem[];
 }

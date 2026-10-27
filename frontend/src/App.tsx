@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LoginView from './LoginView';
 import AdmissionView from './AdmissionView';
+import PortalView from './PortalView';
 import {
   DEMO_USERS,
   UserProfile,
@@ -59,7 +60,7 @@ export default function App() {
   const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
     localStorage.setItem('erp_user', JSON.stringify(user));
-    setCurrentView('dashboard');
+    setCurrentView(user.role === 'student' || user.role === 'guardian' ? 'portal' : 'dashboard');
   };
 
   const handleLogout = () => {
@@ -75,7 +76,7 @@ export default function App() {
       setCurrentUser(selected);
       localStorage.setItem('erp_user', JSON.stringify(selected));
       setUserDropdownOpen(false);
-      setCurrentView('dashboard');
+      setCurrentView(selected.role === 'student' || selected.role === 'guardian' ? 'portal' : 'dashboard');
     }
   };
 
@@ -404,7 +405,10 @@ export default function App() {
             <i className="fa-solid fa-graduation-cap"></i> ERP Sekolah
           </span>
           <nav className="hidden md:flex space-x-1 text-xs pl-3 overflow-x-auto">
-            {['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory'].map((view) => (
+            {(currentUser.role === 'student' || currentUser.role === 'guardian'
+              ? ['portal']
+              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory', 'portal']
+            ).map((view) => (
               <button
                 key={view}
                 onClick={() => setCurrentView(view)}
@@ -412,7 +416,23 @@ export default function App() {
                   currentView === view ? 'bg-[#583950] font-semibold' : 'hover:bg-[#583950]'
                 }`}
               >
-                {view === 'admission' ? 'PPDB' : view === 'academics' ? 'Akademik' : view === 'attendance' ? 'Presensi' : view === 'exams' ? 'Ujian & Nilai' : view === 'finance' ? 'Keuangan (SPP)' : view === 'inventory' ? 'Inventaris' : view === 'students' ? 'Siswa' : 'Dashboard'}
+                {view === 'portal'
+                  ? (currentUser.role === 'guardian' ? 'Portal Wali' : 'Portal Siswa')
+                  : view === 'admission'
+                  ? 'PPDB'
+                  : view === 'academics'
+                  ? 'Akademik'
+                  : view === 'attendance'
+                  ? 'Presensi'
+                  : view === 'exams'
+                  ? 'Ujian & Nilai'
+                  : view === 'finance'
+                  ? 'Keuangan (SPP)'
+                  : view === 'inventory'
+                  ? 'Inventaris'
+                  : view === 'students'
+                  ? 'Siswa'
+                  : 'Dashboard'}
               </button>
             ))}
           </nav>
@@ -504,6 +524,7 @@ export default function App() {
         ) : (
           <>
             {currentView === 'admission' && <AdmissionView />}
+            {currentView === 'portal' && <PortalView currentUser={currentUser} />}
 
             {currentView === 'dashboard' && (
               <div className="space-y-6">
