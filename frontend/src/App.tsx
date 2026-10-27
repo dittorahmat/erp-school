@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LoginView from './LoginView';
 import AdmissionView from './AdmissionView';
+import LibraryView from './LibraryView';
 import PortalView from './PortalView';
 import {
   DEMO_USERS,
@@ -407,7 +408,7 @@ export default function App() {
           <nav className="hidden md:flex space-x-1 text-xs pl-3 overflow-x-auto">
             {(currentUser.role === 'student' || currentUser.role === 'guardian'
               ? ['portal']
-              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory', 'portal']
+              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory', 'library', 'portal']
             ).map((view) => (
               <button
                 key={view}
@@ -430,6 +431,8 @@ export default function App() {
                   ? 'Keuangan (SPP)'
                   : view === 'inventory'
                   ? 'Inventaris'
+                  : view === 'library'
+                  ? 'Perpustakaan'
                   : view === 'students'
                   ? 'Siswa'
                   : 'Dashboard'}
@@ -524,6 +527,7 @@ export default function App() {
         ) : (
           <>
             {currentView === 'admission' && <AdmissionView />}
+            {currentView === 'library' && <LibraryView />}
             {currentView === 'portal' && <PortalView currentUser={currentUser} />}
 
             {currentView === 'dashboard' && (

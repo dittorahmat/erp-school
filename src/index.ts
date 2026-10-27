@@ -8,6 +8,7 @@ import { examRouter } from "./routes/exams";
 import { financeRouter } from "./routes/finance";
 import { inventoryRouter } from "./routes/inventory";
 import admissionRouter from "./routes/admission";
+import { libraryRouter } from "./routes/library";
 import { portalRouter } from "./routes/portal";
 import { odooShellHtml } from "./views/shell";
 
@@ -31,6 +32,7 @@ app.route("/api/exams", examRouter);
 app.route("/api/finance", financeRouter);
 app.route("/api/inventory", inventoryRouter);
 app.route("/api/admission", admissionRouter);
+app.route("/api/library", libraryRouter);
 app.route("/api/portal", portalRouter);
 
 // Healthcheck

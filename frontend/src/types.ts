@@ -293,3 +293,44 @@ export interface PortalOverviewResponse {
   grades: PortalGradeItem[];
   invoices: PortalInvoiceItem[];
 }
+
+export interface LibraryMedia {
+  id: string;
+  schoolId: string;
+  productId: string;
+  name: string;
+  code: string;
+  isbn?: string | null;
+  author: string;
+  publisher?: string | null;
+  edition?: string | null;
+  subjectId?: string | null;
+  shelfLocation?: string | null;
+  barcode: string;
+  status: 'available' | 'issued' | 'lost' | 'maintenance';
+  standardPrice?: number;
+  listPrice?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryIssue {
+  id: string;
+  schoolId: string;
+  mediaId: string;
+  studentId: string;
+  studentName?: string;
+  studentNis?: string;
+  mediaName?: string;
+  mediaBarcode?: string;
+  mediaAuthor?: string;
+  issueDate: string;
+  dueDate: string;
+  returnDate?: string | null;
+  condition: 'good' | 'damaged' | 'lost';
+  status: 'issued' | 'returned' | 'lost';
+  fineAmount?: number;
+  fineInvoiceId?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
