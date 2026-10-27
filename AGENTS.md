@@ -47,9 +47,13 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Kolom SQL D1 wajib berformat `snake_case`, cocokkan dengan pemetaan `drizzle-orm` di `src/db/schema.ts`.
   - Transaksi akuntansi wajib berimbang Debit = Credit (`/api/finance/trial-balance`).
   - Deploy live Cloudflare Workers menggunakan `npm run deploy` via Wrangler.
-- **UI State Lookup Standard**:
+- **UI State Lookup Standard & String Escaping Hygiene**:
   - **MANDAT KETAT**: Dilarang keras menserialisasi seluruh objek JSON ke dalam inline onclick handler HTML (`onclick="edit(${JSON.stringify(item)})"`).
-  - Wajib mengoper ID item saja (`onclick="edit('${item.id}')"`) dan mengambil datanya dari `state.cache` sisi klien atau query API berdasarkan ID.
+  - Wajib mengoper ID item saja (`onclick="edit(&apos;${item.id}&apos;)"`) dan mengambil datanya dari `state.cache` sisi klien atau query API berdasarkan ID.
+  - **Pencegahan Error Sintaksis Kutip (Zero Client SyntaxError)**:
+    - Hindari kutip bersarang berulang (`\\'`, `\'`) di dalam generator HTML / template literal. Gunakan entitas HTML aman (`&apos;` atau `&quot;`) untuk parameter event handler inline, atau pasang event listener via DOM.
+    - Setiap karakter newline pada string JS literal di dalam template HTML wajib diescape secara valid (`\\n`) agar tidak memicu `SyntaxError: Invalid or unexpected token` pada browser klien.
+    - Seluruh perubahan file UI/shell WAJIB lulus uji parsing engine JavaScript klien via automated guardrail (`tests/foundation.test.ts`).
 - **HTML Date Inputs**:
   - Seluruh input form tanggal wajib menggunakan native `<input type="date">` untuk menjamin format ISO 8601 YYYY-MM-DD yang valid dan konsisten.
 - **Domain Type Safety**:
