@@ -58,4 +58,10 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Seluruh metode operasi create/update di domain module (`src/domain/*`) WAJIB memiliki parameter interface bertipe kuat (strongly typed), dilarang menggunakan `body: any` atau `data: any`. Gunakan utilitas compacting (`compactDefined`) untuk pembaruan parsial yang bersih tanpa boilerplate `if (x !== undefined)`.
 - **Client-Side Domain Isolation & Data Completeness**:
   - Seluruh aturan isolasi domain frontend, penomoran dokumen di backend, dynamic tenant sourcing, dan data fetching completeness: **lihat `CODING_STANDARDS.md` §7**.
+- **Dynamic Academic Session & Tenant Resolution (Anti-Hardcoded Session)**:
+  - **MANDAT KETAT**: Dilarang keras menaruh string hardcoded tahun ajaran (e.g. `'2025/2026'`, `'ay_2026_2027'`) atau tenant ID statis di antarmuka frontend, payload form submission, maupun fallback domain backend.
+  - Sesi akademik (Tahun Ajaran aktif & Term/Semester aktif) WAJIB selalu diresolusi secara dinamis via query D1 (`academicYears.status = 'active'`, `terms.status = 'active'`) dan/atau state konteks frontend (`academicYears.find(...)`).
+  - Rekapitulasi header presensi (`attendance_sheets`) WAJIB selalu sinkron dan konsisten secara matematis dengan agregasi baris presensi (`attendance_lines`: present, sick, excused, absent).
+  - Scratch dan task planning internal (`.scratch/`) dilarang dimasukkan ke dalam version control tracking.
+
 

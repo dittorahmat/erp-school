@@ -298,8 +298,8 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            schoolId: 'school_sma_hb',
-            academicYearId: 'ay_2026_2027',
+            schoolId: currentUser.schoolId || academicYears.find((y) => y.status === 'active')?.schoolId || 'school_sma_hb',
+            academicYearId: academicYears.find((y) => y.status === 'active')?.id || 'ay_2026_2027',
             termId: 'term_sem1',
             classroomId: 'cls_x_ipa_1',
             subjectId: 'sbj_mat',

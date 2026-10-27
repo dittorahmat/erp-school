@@ -220,7 +220,8 @@ INSERT OR REPLACE INTO attendance_sheets (id, school_id, classroom_id, faculty_i
 VALUES 
   ('att_20261026_01', 'school_sma_hb', 'cls_x_ipa_1', 'fac_budi', 'tt_mon_mat', '2026-10-26', 'confirmed', 4, 0, 0, 0, 1761476400, 1761476400),
   ('att_20261020_01', 'school_sma_hb', 'cls_x_ipa_1', 'fac_budi', 'tt_tue_eng', '2026-10-20', 'confirmed', 3, 0, 1, 0, 1761476400, 1761476400),
-  ('att_20261019_01', 'school_sma_hb', 'cls_x_ipa_1', 'fac_dewi', 'tt_mon_fis', '2026-10-19', 'confirmed', 3, 0, 0, 1, 1761476400, 1761476400);
+  ('att_20261019_01', 'school_sma_hb', 'cls_x_ipa_1', 'fac_dewi', 'tt_mon_fis', '2026-10-19', 'confirmed', 3, 0, 0, 1, 1761476400, 1761476400),
+  ('att_20261012_01', 'school_sma_hb', 'cls_x_ipa_1', 'fac_budi', 'tt_mon_mat', '2026-10-12', 'confirmed', 3, 1, 0, 0, 1761476400, 1761476400);
 
 INSERT OR REPLACE INTO attendance_lines (id, sheet_id, student_id, status, remark, created_at)
 VALUES 
@@ -238,7 +239,12 @@ VALUES
   ('attl_andi_03', 'att_20261019_01', 'std_andi', 'present', 'Hadir', 1761476400),
   ('attl_bella_03', 'att_20261019_01', 'std_bella', 'present', 'Hadir', 1761476400),
   ('attl_citra_03', 'att_20261019_01', 'std_citra', 'present', 'Hadir', 1761476400),
-  ('attl_dimas_03', 'att_20261019_01', 'std_dimas', 'excused', 'Izin acara keluarga', 1761476400);
+  ('attl_dimas_03', 'att_20261019_01', 'std_dimas', 'excused', 'Izin acara keluarga', 1761476400),
+  -- Sesi 12 Okt 2026 (Dimas Alpa)
+  ('attl_andi_04', 'att_20261012_01', 'std_andi', 'present', 'Hadir', 1761476400),
+  ('attl_bella_04', 'att_20261012_01', 'std_bella', 'present', 'Hadir', 1761476400),
+  ('attl_citra_04', 'att_20261012_01', 'std_citra', 'present', 'Hadir', 1761476400),
+  ('attl_dimas_04', 'att_20261012_01', 'std_dimas', 'absent', 'Tanpa keterangan', 1761476400);
 
 -- 16. Exam Sessions & Grade Marks (Multi-Mapel: Matematika, Fisika, Kimia, Biologi)
 INSERT OR REPLACE INTO exam_sessions (id, school_id, academic_year_id, term_id, classroom_id, subject_id, name, exam_date, total_marks, passing_marks, weightage, status, created_at, updated_at)
@@ -246,7 +252,8 @@ VALUES
   ('exam_uts_mat', 'school_sma_hb', 'ay_2026_2027', 'term_sem1', 'cls_x_ipa_1', 'sbj_mat', 'UTS Semester Ganjil Matematika Wajib', '2026-10-15', 100, 75, 30, 'published', 1761476400, 1761476400),
   ('exam_uts_fis', 'school_sma_hb', 'ay_2026_2027', 'term_sem1', 'cls_x_ipa_1', 'sbj_fis', 'UTS Semester Ganjil Fisika Dasar', '2026-10-16', 100, 75, 30, 'published', 1761476400, 1761476400),
   ('exam_uts_kim', 'school_sma_hb', 'ay_2026_2027', 'term_sem1', 'cls_x_ipa_1', 'sbj_kim', 'UTS Semester Ganjil Kimia Analitik', '2026-10-17', 100, 75, 30, 'published', 1761476400, 1761476400),
-  ('exam_uts_bio', 'school_sma_hb', 'ay_2026_2027', 'term_sem1', 'cls_x_ipa_1', 'sbj_bio', 'UTS Semester Ganjil Biologi Umum', '2026-10-18', 100, 75, 30, 'published', 1761476400, 1761476400);
+  ('exam_uts_bio', 'school_sma_hb', 'ay_2026_2027', 'term_sem1', 'cls_x_ipa_1', 'sbj_bio', 'UTS Semester Ganjil Biologi Umum', '2026-10-18', 100, 75, 30, 'published', 1761476400, 1761476400),
+  ('exam_uts_eng', 'school_sma_hb', 'ay_2026_2027', 'term_sem1', 'cls_x_ipa_1', 'sbj_eng', 'UTS Semester Ganjil Bahasa Inggris', '2026-10-19', 100, 75, 30, 'published', 1761476400, 1761476400);
 
 INSERT OR REPLACE INTO exam_marks (id, session_id, student_id, marks_obtained, grade, remark, created_at, updated_at)
 VALUES 
@@ -265,4 +272,15 @@ VALUES
   ('mark_citra_fis', 'exam_uts_fis', 'std_citra', 89, 'B', 'Kreatif dalam pembahasan soal', 1761476400, 1761476400),
   -- Dimas Anggara
   ('mark_dimas_mat', 'exam_uts_mat', 'std_dimas', 91, 'A', 'Analitis tinggi', 1761476400, 1761476400),
-  ('mark_dimas_fis', 'exam_uts_fis', 'std_dimas', 84, 'B', 'Tuntas memuaskan', 1761476400, 1761476400);
+  ('mark_dimas_fis', 'exam_uts_fis', 'std_dimas', 84, 'B', 'Tuntas memuaskan', 1761476400, 1761476400),
+  -- B. Inggris & Seluruh Siswa
+  ('mark_andi_eng', 'exam_uts_eng', 'std_andi', 89, 'B', 'Excellent speaking and grammar', 1761476400, 1761476400),
+  ('mark_bella_eng', 'exam_uts_eng', 'std_bella', 96, 'A', 'Outstanding vocabulary and essays', 1761476400, 1761476400),
+  ('mark_citra_eng', 'exam_uts_eng', 'std_citra', 90, 'A', 'Active participation in discussions', 1761476400, 1761476400),
+  ('mark_dimas_eng', 'exam_uts_eng', 'std_dimas', 87, 'B', 'Good comprehension skills', 1761476400, 1761476400),
+  ('mark_erik_mat', 'exam_uts_mat', 'std_erik', 82, 'B', 'Kompeten dan tekun', 1761476400, 1761476400),
+  ('mark_fani_mat', 'exam_uts_mat', 'std_fani', 88, 'B', 'Kemampuan berhitung sangat baik', 1761476400, 1761476400),
+  ('mark_gilang_mat', 'exam_uts_mat', 'std_gilang', 80, 'B', 'Tuntas sesuai KKM', 1761476400, 1761476400),
+  ('mark_hana_mat', 'exam_uts_mat', 'std_hana', 93, 'A', 'Logika matematika luar biasa', 1761476400, 1761476400),
+  ('mark_irfan_mat', 'exam_uts_mat', 'std_irfan', 86, 'B', 'Penguasaan materi mantap', 1761476400, 1761476400),
+  ('mark_jessica_mat', 'exam_uts_mat', 'std_jessica', 91, 'A', 'Kritis dan teliti', 1761476400, 1761476400);
