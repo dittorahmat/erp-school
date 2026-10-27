@@ -34,3 +34,11 @@
 
 ## 6. Automated Guardrails
 - Jalankan `npm run typecheck` (`tsc --noEmit`) dan `npm run test` (`vitest run`) sebagai langkah verifikasi wajib sebelum setiap commit dan push ke remote repository.
+
+## 7. Client-Side Domain Isolation & View Completeness
+- **MANDAT KETAT**: Dilarang keras meng-generate format sekuensial penomoran dokumen akuntansi/inventaris (seperti `INV/YYYY/...`), ID akun general ledger, atau ID jurnal secara acak di sisi frontend client. Biarkan domain backend yang menentukan fallback dan sequence generation secara sentral.
+- **Dynamic Tenant Sourcing**: Sourcing tenant ID wajib dinamis dari profil aktif pengguna (`currentUser.schoolId`), dilarang menaruh string hardcoded tenant di payload transaksi client.
+- **Relational View Fetching & Options Completeness**: Setiap modal yang membutuhkan relasi ke entitas lain (misal modal Finance butuh daftar Siswa) WAJIB memastikan dataset entitas tersebut di-fetch pada siklus `fetchData()` view tersebut, lengkap dengan placeholder default `<option value="" disabled>-- Pilih Entitas --</option>`.
+- **UI State Lookup Standard**: Dilarang keras mengoper entire stale object ke dalam state setter (`handleEdit(item)`). Wajib mengoper ID item saja (`handleEdit(item.id)`) dan mengambil datanya dari state list atau query API berdasarkan ID.
+- **HTML Date Inputs**: Seluruh input form tanggal wajib menggunakan native `<input type="date">` untuk menjamin format ISO 8601 YYYY-MM-DD yang valid dan konsisten.
+- **Dual-Entity Modules View Completeness**: View yang mengelola master entitas berpasangan atau berkorelasi kuat (seperti Modul Akademik: Tahun Ajaran + Mata Pelajaran / Kurikulum) WAJIB menyediakan antarmuka manajemen UI lengkap untuk kedua entitas tersebut, bukan hanya salah satunya.

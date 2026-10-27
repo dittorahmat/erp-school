@@ -34,4 +34,30 @@ describe("Architecture Boundary Guardrail", () => {
     expect(content).toContain('from "./inventory"');
     expect(content).toContain('from "./attendance"');
   });
+
+  it("should enforce client-side domain isolation: frontend must not generate document sequence numbers or hardcode COA accounts", () => {
+    const frontendDir = path.resolve(__dirname, "../frontend/src");
+    if (!fs.existsSync(frontendDir)) return;
+
+    const frontendFiles = fs.readdirSync(frontendDir).filter((f) => f.endsWith(".tsx") || f.endsWith(".ts"));
+    const violations: string[] = [];
+
+    for (const file of frontendFiles) {
+      const filePath = path.join(frontendDir, file);
+      const content = fs.readFileSync(filePath, "utf-8");
+
+      // Regex matching random sequence format generator like INV/2026/ or PAY/2026/ with Math.random
+      if (/(`|'|")INV\/\$\{.*Math\.random/i.test(content)) {
+        violations.push(`${file} generates invoice sequence number with Math.random; sequence generation must be delegated to the backend domain.`);
+      }
+      if (/receivableAccountId:\s*['"]coa_/i.test(content) || /incomeAccountId:\s*['"]coa_/i.test(content)) {
+        violations.push(`${file} hardcodes COA account IDs; general ledger account assignment must be resolved by the backend domain.`);
+      }
+    }
+
+    expect(
+      violations,
+      `Found client domain leakage violations! Domain logic must stay in backend:\n${violations.join("\n")}`
+    ).toEqual([]);
+  });
 });
