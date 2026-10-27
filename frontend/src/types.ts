@@ -526,6 +526,4 @@ export interface VendorBill {
   lines?: any[];
 }
 
-}
-
 
