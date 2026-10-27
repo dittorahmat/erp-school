@@ -572,7 +572,7 @@ export const payslips = sqliteTable('payslips', {
 });
 
 // --------------------------------------------------------------------------
-// Assignment & LMS (OpenEduCat op.assignment & op.assignment.submisssion style)
+// Assignment & LMS (OpenEduCat op.assignment & op.assignment.submission style)
 // --------------------------------------------------------------------------
 export const assignments = sqliteTable('assignments', {
   id: text('id').primaryKey(),
@@ -606,5 +606,34 @@ export const assignmentSubmissions = sqliteTable('assignment_submissions', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
+
+// --------------------------------------------------------------------------
+// Purchase Orders & Lines (Odoo Purchase Model)
+// --------------------------------------------------------------------------
+export const purchaseOrders = sqliteTable('purchase_orders', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // e.g. "PO/2026/0001"
+  partnerName: text('partner_name').notNull(), // Vendor / Rekanan name, e.g. "PT Gramedia Edukasi"
+  orderDate: text('order_date').notNull(), // "2026-10-28"
+  amountTotal: real('amount_total').notNull().default(0),
+  status: text('status').notNull().default('draft'), // draft, approved, cancelled
+  notes: text('notes'),
+  moveId: text('move_id').references(() => accountMoves.id), // Link to vendor bill (in_invoice)
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const purchaseOrderLines = sqliteTable('purchase_order_lines', {
+  id: text('id').primaryKey(),
+  orderId: text('order_id').notNull().references(() => purchaseOrders.id, { onDelete: 'cascade' }),
+  productId: text('product_id').notNull().references(() => products.id),
+  productQty: real('product_qty').notNull().default(1),
+  priceUnit: real('price_unit').notNull().default(0),
+  subtotal: real('subtotal').notNull().default(0),
+  notes: text('notes'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+});
+
 
 

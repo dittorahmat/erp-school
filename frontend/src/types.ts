@@ -442,3 +442,34 @@ export interface AssignmentSubmission {
   updatedAt?: string | number;
 }
 
+export interface PurchaseOrderLine {
+  id: string;
+  orderId: string;
+  productId: string;
+  productName?: string;
+  productCode?: string;
+  uom?: string;
+  productQty: number;
+  priceUnit: number;
+  subtotal: number;
+  notes?: string | null;
+  createdAt?: number | string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  schoolId: string;
+  name: string;
+  partnerName: string;
+  orderDate: string;
+  amountTotal: number;
+  status: 'draft' | 'approved' | 'cancelled';
+  notes?: string | null;
+  moveId?: string | null;
+  createdAt: number | string;
+  updatedAt: number | string;
+  lines?: PurchaseOrderLine[];
+}
+
+}
+
