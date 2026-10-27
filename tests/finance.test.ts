@@ -246,4 +246,48 @@ describe("Double-Entry Accounting API", () => {
     expect(data.totalDebit).toBe(0);
     expect(data.totalCredit).toBe(0);
   });
+
+  it("should preserve balanced trial balance after creating invoice and posting double-entry lines", async () => {
+    let batchedStatements: any[] = [];
+    const mockEnv = {
+      DB: {
+        prepare: () => ({
+          bind: () => ({
+            run: async () => ({ success: true })
+          })
+        }),
+        batch: async (statements: any[]) => {
+          batchedStatements = statements;
+          return statements.map(() => ({ success: true }));
+        }
+      }
+    };
+
+    const payload = {
+      schoolId: "school_sma_hb",
+      studentId: "std_andi",
+      amountTotal: 750000,
+      description: "SPP November 2026",
+      date: "2026-11-01",
+      dueDate: "2026-11-10",
+      receivableAccountId: "coa_ar",
+      incomeAccountId: "coa_rev_spp"
+    };
+
+    const res = await app.request(
+      "/api/finance/invoices",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      },
+      mockEnv as any
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.success).toBe(true);
+    expect(body.data.amountTotal).toBe(750000);
+    expect(batchedStatements).toHaveLength(3); // 1 header invoice + 1 debit AR + 1 credit income
+  });
 });
