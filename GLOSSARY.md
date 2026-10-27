@@ -56,16 +56,27 @@ Dokumen ini mendefinisikan istilah dan konsep kanonik yang digunakan dalam siste
 
 ---
 
-## 7. Inventaris & Pengelolaan Aset (Inventory ala Odoo)
-- **Warehouse (Gudang/Penyimpanan)**: Lokasi fisik utama inventaris sekolah (misal: "Gudang Utama", "Perpustakaan", "Lab IPA").
-- **Location**: Sub-lokasi dalam gudang (`internal`, `customer`, `vendor`, `inventory_loss`).
-- **Product (Barang/Item)**: Barang inventaris sekolah dengan tipe:
-  - *Storable Product*: Buku paket, seragam, modul pelajaran (dihitung stok fisik).
-  - *Consumable*: ATK, kertas, spidol, cairan pembersih.
-  - *Asset / Equipment*: Proyektor, laptop lab, meja kursi (diberi nomor seri/barcode).
-- **Stock Move (`stock.move`)**: Mutasi perpindahan kuantitas Product dari satu Location ke Location lain.
-- **Stock Picking / Operation (`stock.picking`)**: Dokumen batch transfer mutasi:
-  - *Receipt (Penerimaan Barang dari Vendor)*
-  - *Internal Transfer (Perpindahan antar Lab/Ruang)*
-  - *Delivery / Issue (Penyerahan seragam/buku ke Siswa atau guru)*
-- **Inventory Adjustment (Stock Opname)**: Penyesuaian stok sistem dengan perhitungan fisik riil.
+## 8. Penerimaan Peserta Didik Baru (Admission / PPDB ala OpenEduCat)
+- **Application Register (Gelombang Pendaftaran)**: Periode pendaftaran siswa baru untuk Tahun Ajaran dan Course tertentu (misal: "Gelombang 1 Reguler 2026/2027") dengan kuota dan rentang tanggal.
+- **Application / Applicant (Calon Siswa)**: Entitas calon siswa terdaftar dengan status alur (`draft`, `submitted`, `verified`, `approved`, `rejected`, `enrolled`).
+- **Admission Fee Rule**: Biaya pendaftaran dan biaya pangkal awal yang otomatis mengompilasi draft `Student Invoice` saat status calon siswa bergeser ke `approved` / `enrolled`.
+
+---
+
+## 9. Struktur Biaya & Otomasi Tagihan (Fee Structure & Batch Invoicing)
+- **Fee Category / Type**: Kategori biaya (misal: "SPP Bulanan", "Uang Gedung", "Iuran Praktikum", "Biaya Ujian").
+- **Fee Structure**: Paket aturan tarif biaya yang ditautkan ke Grade Level atau Program (misal: Tarif SPP Kelas 10 MIPA Rp 500.000/bulan).
+- **Fee Batch Generation Run**: Eksekusi batch terkontrol oleh bendahara sekolah yang mengompilasi `account.move` (`out_invoice`) secara massal untuk seluruh siswa aktif di suatu kelas/jenjang pada bulan tertentu dalam satu transaksi atomik D1.
+
+---
+
+## 10. Perpustakaan (Library Circulation ala OpenEduCat & Odoo)
+- **Library Media**: Produk buku/media yang terintegrasi langsung dengan entitas `products` (tipe `storable`) dengan atribut tambahan seperti ISBN, pengarang, penerbit, dan nomor rak.
+- **Media Unit / Barcode**: Copy fisik individual dari media dengan kode barcode unik.
+- **Library Issue / Return (Sirkulasi Pinjam)**: Transaksi peminjaman unit buku ke Siswa atau Guru dengan batas tanggal kembali, histori pengembalian, status (`issued`, `returned`, `lost`), dan denda keterlambatan (*fine invoice*).
+
+---
+
+## 11. Portal Akses Siswa & Wali Murid (Parent & Student Self-Service)
+- **Portal Scope**: Filter otorisasi baris (Row-Level Security) berbasis kepemilikan data (`session.user.id` -> `student.user_id` atau `guardian.user_id`), membatasi akses baca data hanya pada jadwal, kehadiran, rapor, dan tagihan invoice milik siswa/anak yang bersangkutan.
+
