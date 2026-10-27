@@ -1,6 +1,6 @@
 # Skenario Demo End-to-End (E2E) — ERP Sekolah
 
-Dokumen ini adalah panduan resmi skenario demo interaktif ERP Sekolah (berbasis Cloudflare Workers D1 + Hono + Odoo-style SPA). Panduan ini dirancang untuk mendemokan kapabilitas sistem dari hulu ke hilir menggunakan pendekatan **Multi-Persona Journey**.
+Dokumen ini adalah panduan resmi skenario demo interaktif ERP Sekolah (berbasis Cloudflare Workers D1 + Hono + Odoo-style SPA). Panduan ini dirancang untuk mendemokan kapabilitas sistem dari hulu ke hilir menggunakan pendekatan **Multi-Persona Journey** pada Tahun Ajaran Aktif **2026/2027**.
 
 ---
 
@@ -45,19 +45,22 @@ Semua akun demo menggunakan kata sandi default: `DemoPass123!`
 ## 3. Langkah Detail Skenario Demo
 
 ### ACT 1: Eksplorasi Master Data & Inventaris (Admin)
-**Tujuan**: Memperlihatkan fondasi operasional sekolah yang terstruktur dan terintegrasi multi-tenant.
+**Tujuan**: Memperlihatkan fondasi operasional sekolah yang terstruktur dan terintegrasi multi-tenant dengan populasi siswa dan rombel yang hidup.
 
 1. **Akses Dashboard**:
    - Buka aplikasi ERP Sekolah (`http://localhost:8787` atau domain deployment).
    - Pastikan login sebagai `admin@sekolah.demo` (Bambang Sudarmono, M.Pd).
-   - Tunjukkan kartu metrik utama: Siswa Aktif, Tenaga Pendidik, Total Rombel, dan Status Keuangan Berjalan.
+   - Tunjukkan kartu metrik utama: Siswa Aktif (10 siswa), Total Rombel (3 kelas: `X-MIPA-1`, `X-MIPA-2`, `XI-MIPA-1`), dan Status Keuangan Berjalan.
 2. **Kelola Struktur Akademik & Siswa**:
-   - Klik menu **Akademik** ➔ Tunjukkan Tahun Ajaran aktif `2025/2026`, Semester Ganjil, dan Mata Pelajaran Kurikulum Merdeka.
-   - Klik menu **Siswa** ➔ Buka daftar siswa kelas `X-MIPA-1`, perlihatkan data lengkap Andi Pratama dan Bella Cantika.
+   - Klik menu **Akademik** ➔ Tunjukkan Tahun Ajaran aktif `2026/2027`, Semester Ganjil, dan Mata Pelajaran Kurikulum Merdeka (Matematika, Fisika, Kimia, Biologi, B. Inggris).
+   - Klik menu **Siswa** ➔ Buka daftar siswa terdaftar, perlihatkan data lengkap Andi Pratama, Bella Cantika, Citra Kirana, Dimas Anggara, dan siswa lainnya.
 3. **Audit Inventaris & Aset Sekolah**:
    - Klik menu **Inventaris** ➔ Tab **Produk & Aset**.
-   - Sorot aset berharga: `Laptop Laboratorium Asus ExpertBook i5` dengan nomor seri `SN-ASUS-2026-8819`.
-   - Tunjukkan riwayat pergerakan stok penerimaan awal (*Stock Picking* `WH/IN/0001`).
+   - Sorot variasi inventaris:
+     - *Aset*: `Laptop Laboratorium Asus ExpertBook i5` (`SN-ASUS-2026-8819`) dan `Proyektor Epson EB-E500`.
+     - *Barang Habis Pakai (Consumable)*: Kertas HVS A4 80gr dan Spidol Whiteboard Snowman.
+     - *Barang Stok (Storable)*: Seragam Kemeja Putih Abu-Abu dan Buku Paket Kurikulum Merdeka.
+   - Tunjukkan riwayat pergerakan stok penerimaan awal (*Stock Picking* `WH/IN/0001`) dan transfer internal ke Lab Komputer (`WH/INT/0001`).
 
 ---
 
@@ -71,12 +74,15 @@ Semua akun demo menggunakan kata sandi default: `DemoPass123!`
    - Tunjukkan slot mengajar: *Senin, 07:30 - 09:00 (Matematika Wajib di Kelas X-MIPA-1)*.
 3. **Lakukan Presensi Kelas**:
    - Masuk ke tab **Sesi Presensi**.
-   - Tunjukkan sesi tanggal `2026-10-26` dengan status `confirmed` (Hadir: 2, Sakit: 0, Izin: 0, Alpa: 0).
+   - Tunjukkan riwayat presensi yang bervariasi:
+     - Sesi `2026-10-26`: 4 Hadir (100% tepat waktu).
+     - Sesi `2026-10-20`: 3 Hadir, 1 Sakit (Bella Cantika surat dokter terlampir).
+     - Sesi `2026-10-19`: 3 Hadir, 1 Izin (Dimas Anggara izin acara keluarga).
    - Klik tombol **Buat Sesi Presensi Baru** untuk mendemokan form interaktif pencatatan presensi real-time.
 4. **Input Nilai Ujian (Gradebook)**:
    - Klik menu **Ujian & Penilaian**.
    - Tunjukkan sesi ujian `UTS Semester Ganjil Matematika Wajib` (KKM 75).
-   - Perlihatkan daftar nilai: Andi Pratama (92 / A) dan Bella Cantika (88 / B).
+   - Perlihatkan daftar nilai: Andi Pratama (92 / A), Bella Cantika (88 / B), Citra Kirana (85 / B), dan Dimas Anggara (91 / A).
 
 ---
 
@@ -87,16 +93,18 @@ Semua akun demo menggunakan kata sandi default: `DemoPass123!`
    - Ganti persona ke `Siti Rahmawati, S.E (Bendahara TU)`.
 2. **Audit Piutang & Status Tagihan**:
    - Buka menu **Keuangan** ➔ Tab **Tagihan Siswa (Invoices)**.
-   - Tunjukkan dua invoice SPP:
-     - `INV/2026/10/0001` (Andi Pratama) ➔ Status: `Paid` (Lunas).
-     - `INV/2026/10/0002` (Bella Cantika) ➔ Status: `Not Paid` (Belum Bayar, Residual: Rp 500.000).
+   - Tunjukkan variasi tagihan multi-jenis:
+     - `INV/2026/10/0001` (Andi Pratama - SPP) ➔ Status: `Paid` (Lunas).
+     - `INV/2026/10/0002` (Bella Cantika - SPP) ➔ Status: `Not Paid` (Belum Bayar, Residual: Rp 500.000).
+     - `INV/2026/09/0005` (Erik Setiawan - Uang Pangkal/Gedung Rp 3.500.000) ➔ Status: `Paid`.
+     - `INV/2026/09/0006` (Fani Rahmawati - Paket Seragam Rp 450.000) ➔ Status: `Paid`.
 3. **Catat Pembayaran Baru**:
    - Klik tab **Pembayaran (Payments)** ➔ Klik **Catat Pembayaran**.
-   - Masukkan pembayaran pelunasan untuk tagihan Bella Cantika via Kasir/Bank.
+   - Masukkan pembayaran pelunasan untuk tagihan Bella Cantika via Kasir/Bank BCA.
    - Simpan, dan tunjukkan residual invoice Bella otomatis berkurang menjadi 0 (Paid).
 4. **Verifikasi Trial Balance (Neraca Saldo)**:
    - Klik tab **Laporan Trial Balance**.
-   - Buktikan bahwa total Debit = total Credit secara presisi tanpa selisih.
+   - Buktikan bahwa total Debit = total Credit secara presisi tanpa selisih (Balanced).
 
 ---
 
@@ -107,10 +115,12 @@ Semua akun demo menggunakan kata sandi default: `DemoPass123!`
    - Ganti akun ke `Andi Pratama (Siswa)`.
 2. **Buka Rapor Digital**:
    - Akses tab **Rapor Digital**.
-   - Tunjukkan kompilasi nilai otomatis UTS Ganjil:
+   - Tunjukkan kompilasi nilai otomatis UTS Ganjil 2026/2027:
      - Matematika Wajib: 92 (A)
      - Fisika Dasar: 86 (B)
-     - Rata-rata Nilai: 89.0
+     - Kimia Analitik: 90 (A)
+     - Biologi Umum: 88 (B)
+     - Rata-rata Nilai: 89.0 (Status: Tuntas)
 3. **Cek Rekap Kehadiran & Status Tagihan**:
    - Konfirmasi kehadiran Andi 100% hadir pada presensi mingguan.
    - Konfirmasi status SPP Oktober sudah berstatus Lunas tanpa tunggakan.
@@ -151,5 +161,5 @@ Tersedia skrip otomatis di [`package.json`](file:///D:/development/erp-school/pa
 
 - [x] Database lokal/remote Cloudflare D1 telah dieksekusi seeder terbaru (`src/db/seed.sql`).
 - [x] Jalankan verifikasi kode: `npm run typecheck` (0 error).
-- [x] Jalankan rangkaian unit & E2E integration test otomatis: `npm test` (Seluruh 10 test file / 62 test lolos, termasuk `tests/e2e-demo-scenario.test.ts`).
+- [x] Jalankan rangkaian unit & E2E integration test otomatis: `npm test` (Seluruh 10 test file / 65 test lolos, termasuk `tests/e2e-demo-scenario.test.ts`).
 - [x] Server dev aktif di terminal: `npm run dev` (port default `8787`).
