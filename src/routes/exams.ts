@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { examManagement } from "../domain/exams";
+import { examManagement } from "../domain";
 import type { Bindings } from "../index";
 
 export const examRouter = new Hono<{ Bindings: Bindings }>();

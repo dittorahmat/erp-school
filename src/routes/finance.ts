@@ -1,5 +1,12 @@
 import { Hono } from "hono";
-import { accountingEngine } from "../domain/accounting";
+import {
+  accountingEngine,
+  createFeeCategory,
+  listFeeCategories,
+  createFeeStructure,
+  listFeeStructures,
+  generateMonthlyFees
+} from "../domain";
 import type { Bindings } from "../index";
 
 export const financeRouter = new Hono<{ Bindings: Bindings }>();
@@ -54,4 +61,39 @@ financeRouter.post("/payments", async (c) => {
 financeRouter.get("/trial-balance", async (c) => {
   const result = await accountingEngine.getTrialBalance(c.env.DB);
   return c.json(result);
+});
+
+financeRouter.get("/fee-categories", async (c) => {
+  const schoolId = c.req.query("schoolId") || "sch_01";
+  const db = (c as any).var?.db;
+  const categories = await listFeeCategories(db, schoolId);
+  return c.json({ data: categories });
+});
+
+financeRouter.post("/fee-categories", async (c) => {
+  const body = await c.req.json();
+  const db = (c as any).var?.db;
+  const result = await createFeeCategory(db, c.env.DB, body);
+  return c.json({ data: result }, 201);
+});
+
+financeRouter.get("/fee-structures", async (c) => {
+  const schoolId = c.req.query("schoolId") || "sch_01";
+  const db = (c as any).var?.db;
+  const structures = await listFeeStructures(db, schoolId);
+  return c.json({ data: structures });
+});
+
+financeRouter.post("/fee-structures", async (c) => {
+  const body = await c.req.json();
+  const db = (c as any).var?.db;
+  const result = await createFeeStructure(db, c.env.DB, body);
+  return c.json({ data: result }, 201);
+});
+
+financeRouter.post("/generate-fees", async (c) => {
+  const body = await c.req.json();
+  const db = (c as any).var?.db;
+  const result = await generateMonthlyFees(db, c.env.DB, body);
+  return c.json({ data: result }, 201);
 });

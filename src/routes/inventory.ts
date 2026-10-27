@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { stockTransfer } from "../domain/inventory";
+import { stockTransfer } from "../domain";
 import type { Bindings } from "../index";
 
 export const inventoryRouter = new Hono<{ Bindings: Bindings }>();

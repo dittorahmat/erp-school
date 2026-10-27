@@ -25,6 +25,25 @@ describe("Architecture Boundary Guardrail", () => {
     ).toEqual([]);
   });
 
+  it("should enforce single seam index: routes must strictly import from '../domain', not individual domain files", () => {
+    const violations: string[] = [];
+
+    for (const file of routeFiles) {
+      const filePath = path.join(routesDir, file);
+      const content = fs.readFileSync(filePath, "utf-8");
+
+      // Must not import from "../domain/xxx" or '../domain/xxx'
+      if (/from\s+['"]\.\.\/domain\/.+['"]/.test(content)) {
+        violations.push(`${file} imports from an individual domain submodule. Must strictly import from '../domain'.`);
+      }
+    }
+
+    expect(
+      violations,
+      `Found seam leakage violations! Routes must strictly import from '../domain':\n${violations.join("\n")}`
+    ).toEqual([]);
+  });
+
   it("should verify that domain modules are centralized and exported in src/domain/index.ts", () => {
     const domainIndexPath = path.resolve(__dirname, "../src/domain/index.ts");
     expect(fs.existsSync(domainIndexPath)).toBe(true);
@@ -33,6 +52,10 @@ describe("Architecture Boundary Guardrail", () => {
     expect(content).toContain('from "./accounting"');
     expect(content).toContain('from "./inventory"');
     expect(content).toContain('from "./attendance"');
+    expect(content).toContain('from "./admission"');
+    expect(content).toContain('from "./fees"');
+    expect(content).toContain('from "./library"');
+    expect(content).toContain('from "./portal"');
   });
 
   it("should enforce client-side domain isolation: frontend must not generate document sequence numbers or hardcode COA accounts", () => {

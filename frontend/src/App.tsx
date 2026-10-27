@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import LoginView from './LoginView';
+import AdmissionView from './AdmissionView';
+import LibraryView from './LibraryView';
+import PortalView from './PortalView';
 import {
   DEMO_USERS,
   UserProfile,
@@ -38,6 +41,11 @@ export default function App() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [trialBalance, setTrialBalance] = useState<TrialBalanceReport | null>(null);
   const [inventory, setInventory] = useState<InventoryProduct[]>([]);
+  const [feeStructures, setFeeStructures] = useState<any[]>([]);
+  const [showBatchFeeModal, setShowBatchFeeModal] = useState(false);
+  const [batchFeeStep, setBatchFeeStep] = useState<'config' | 'preview'>('config');
+  const [batchMonth, setBatchMonth] = useState('2026-10');
+  const [selectedFeeStructureId, setSelectedFeeStructureId] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Modals
@@ -54,7 +62,7 @@ export default function App() {
   const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
     localStorage.setItem('erp_user', JSON.stringify(user));
-    setCurrentView('dashboard');
+    setCurrentView(user.role === 'student' || user.role === 'guardian' ? 'portal' : 'dashboard');
   };
 
   const handleLogout = () => {
@@ -70,7 +78,7 @@ export default function App() {
       setCurrentUser(selected);
       localStorage.setItem('erp_user', JSON.stringify(selected));
       setUserDropdownOpen(false);
-      setCurrentView('dashboard');
+      setCurrentView(selected.role === 'student' || selected.role === 'guardian' ? 'portal' : 'dashboard');
     }
   };
 
@@ -299,7 +307,7 @@ export default function App() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             schoolId: currentUser.schoolId || academicYears.find((y) => y.status === 'active')?.schoolId || 'school_sma_hb',
-            academicYearId: academicYears.find((y) => y.status === 'active')?.id || 'ay_2026_2027',
+            academicYearId: academicYears.find((y) => y.status === 'active')?.id || academicYears[0]?.id || '',
             termId: 'term_sem1',
             classroomId: 'cls_x_ipa_1',
             subjectId: 'sbj_mat',
@@ -399,7 +407,10 @@ export default function App() {
             <i className="fa-solid fa-graduation-cap"></i> ERP Sekolah
           </span>
           <nav className="hidden md:flex space-x-1 text-xs pl-3 overflow-x-auto">
-            {['dashboard', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory'].map((view) => (
+            {(currentUser.role === 'student' || currentUser.role === 'guardian'
+              ? ['portal']
+              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory', 'library', 'portal']
+            ).map((view) => (
               <button
                 key={view}
                 onClick={() => setCurrentView(view)}
@@ -407,7 +418,25 @@ export default function App() {
                   currentView === view ? 'bg-[#583950] font-semibold' : 'hover:bg-[#583950]'
                 }`}
               >
-                {view === 'academics' ? 'Akademik' : view === 'attendance' ? 'Presensi' : view === 'exams' ? 'Ujian & Nilai' : view === 'finance' ? 'Keuangan (SPP)' : view === 'inventory' ? 'Inventaris' : view === 'students' ? 'Siswa' : 'Dashboard'}
+                {view === 'portal'
+                  ? (currentUser.role === 'guardian' ? 'Portal Wali' : 'Portal Siswa')
+                  : view === 'admission'
+                  ? 'PPDB'
+                  : view === 'academics'
+                  ? 'Akademik'
+                  : view === 'attendance'
+                  ? 'Presensi'
+                  : view === 'exams'
+                  ? 'Ujian & Nilai'
+                  : view === 'finance'
+                  ? 'Keuangan (SPP)'
+                  : view === 'inventory'
+                  ? 'Inventaris'
+                  : view === 'library'
+                  ? 'Perpustakaan'
+                  : view === 'students'
+                  ? 'Siswa'
+                  : 'Dashboard'}
               </button>
             ))}
           </nav>
@@ -498,6 +527,10 @@ export default function App() {
           <div className="p-8 text-center text-slate-400">Memuat data dari D1...</div>
         ) : (
           <>
+            {currentView === 'admission' && <AdmissionView />}
+            {currentView === 'library' && <LibraryView />}
+            {currentView === 'portal' && <PortalView currentUser={currentUser} />}
+
             {currentView === 'dashboard' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -709,7 +742,17 @@ export default function App() {
             {currentView === 'finance' && (
               <div className="space-y-6">
                 <div className="bg-white rounded border border-slate-200 overflow-hidden">
-                  <div className="p-3.5 border-b border-slate-200 font-bold text-slate-800 text-xs">Daftar Tagihan Siswa (Invoices)</div>
+                  
+                  <div className="p-3.5 border-b border-slate-200 font-bold text-slate-800 text-xs flex justify-between items-center">
+                    <span>Daftar Tagihan Siswa (Invoices)</span>
+                    <button
+                      onClick={() => { setBatchFeeStep('config'); setShowBatchFeeModal(true); }}
+                      className="bg-[#714B67] hover:bg-[#583950] text-white px-3 py-1 rounded text-xs font-semibold cursor-pointer"
+                    >
+                      + Generate SPP Bulanan Massal
+                    </button>
+                  </div>
+
                   <table className="w-full text-left text-xs text-slate-700">
                     <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
                       <tr>
@@ -795,6 +838,153 @@ export default function App() {
           </>
         )}
       </main>
+      {/* Batch Fee Generator Modal with Preview Step (#36) */}
+      {showBatchFeeModal && (() => {
+        const activeStudents = students.filter(s => s.status === 'active' || !s.status);
+        const selectedStructure = feeStructures.find(f => f.id === selectedFeeStructureId) || feeStructures[0];
+        const feeAmount = Number(selectedStructure?.amount || 0);
+        const totalEstimated = activeStudents.length * feeAmount;
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+              <h3 className="font-bold text-slate-800 text-sm mb-2">
+                {batchFeeStep === 'config' ? 'Konfigurasi Tagihan SPP Bulanan Massal' : 'Preview Batch Invoicing SPP'}
+              </h3>
+              <p className="text-xs text-slate-500 mb-4">
+                {batchFeeStep === 'config'
+                  ? 'Pilih periode bulan dan struktur biaya untuk dievaluasi.'
+                  : 'Tinjau rincian estimasi sebelum melakukan posting massal ke D1.'}
+              </p>
+
+              {batchFeeStep === 'config' ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Periode Bulan Tagihan</label>
+                    <input
+                      type="month"
+                      required
+                      value={batchMonth}
+                      onChange={(e) => setBatchMonth(e.target.value)}
+                      className="w-full text-xs border border-slate-300 rounded p-2 focus:outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Struktur Biaya (Tarif)</label>
+                    <select
+                      value={selectedFeeStructureId}
+                      onChange={(e) => setSelectedFeeStructureId(e.target.value)}
+                      className="w-full text-xs border border-slate-300 rounded p-2 focus:outline-hidden"
+                    >
+                      {feeStructures.length === 0 ? (
+                        <option value="">Belum ada struktur biaya</option>
+                      ) : (
+                        feeStructures.map((f: any) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name} - Rp {Number(f.amount).toLocaleString('id-ID')}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowBatchFeeModal(false)}
+                      className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      disabled={feeStructures.length === 0}
+                      onClick={() => setBatchFeeStep('preview')}
+                      className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold cursor-pointer disabled:opacity-50"
+                    >
+                      Lanjut ke Preview
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    try {
+                      setLoading(true);
+                      const res = await fetch('/api/finance/generate-fees', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          schoolId: 'sch_01',
+                          academicYearId: academicYears.find(ay => ay.status === 'active')?.id || academicYears[0]?.id || '',
+                          month: batchMonth,
+                          feeStructureId: selectedFeeStructureId || feeStructures[0]?.id
+                        })
+                      });
+                      const json = await res.json();
+                      if (res.ok) {
+                        alert(`Berhasil membuat ${json.data.generatedCount} tagihan SPP periode ${batchMonth} senilai Rp ${Number(json.data.totalAmount || 0).toLocaleString('id-ID')}!`);
+                        setShowBatchFeeModal(false);
+                        fetchData();
+                      } else {
+                        alert('Gagal: ' + (json.error || 'Terjadi kesalahan'));
+                      }
+                    } catch (err: any) {
+                      alert('Error generate fees: ' + err.message);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Periode:</span>
+                      <span className="font-semibold text-slate-800">{batchMonth}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Struktur Biaya:</span>
+                      <span className="font-semibold text-slate-800">{selectedStructure?.name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Tarif per Siswa:</span>
+                      <span className="font-semibold text-slate-800">Rp {feeAmount.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-200 pt-2">
+                      <span className="text-slate-700 font-medium">Siswa Teridentifikasi:</span>
+                      <span className="font-bold text-indigo-700 font-mono">{activeStudents.length} siswa</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-200 pt-2">
+                      <span className="text-slate-700 font-medium">Total Estimasi Tagihan:</span>
+                      <span className="font-bold text-emerald-700 font-mono text-sm">
+                        Rp {totalEstimated.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setBatchFeeStep('config')}
+                      className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded"
+                    >
+                      Kembali
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading || activeStudents.length === 0}
+                      className="px-3.5 py-1.5 text-xs bg-[#714B67] hover:bg-[#583950] text-white rounded font-semibold cursor-pointer disabled:opacity-50"
+                    >
+                      {loading ? 'Memproses Batch...' : 'Konfirmasi & Eksekusi Batch'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
 
       {/* Dynamic Create Modal */}
       {activeModal === 'create' && (

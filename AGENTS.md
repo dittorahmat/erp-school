@@ -21,6 +21,11 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - **MANDAT KETAT**: Implement YAGNI, prefer one liner solutions. Hindari over-engineering, abstraksi berlebihan yang belum diperlukan, dan duplikasi kode antar modul. Gunakan utilitas satu baris terpusat (seperti di `src/lib/utils.ts`).
 - **Cloudflare D1 Multi-Statement Operations (Atomic Batching)**:
   - Setiap operasi penulisan relasional header + items/lines (misalnya invoice header + move lines, presensi sheet + attendance lines, stock picking + stock moves) **WAJIB menggunakan `await db.batch([...])`** dalam satu roundtrip ke D1, dilarang melakukan multiple inserts berurutan secara terpisah.
+- **Deep Modules & Clean Seams (Anti Shallow Controllers)**:
+  - **MANDAT KETAT**: Route handlers HTTP (`src/routes/`) WAJIB berupa adapter tipis (thin HTTP adapters). Seluruh aturan bisnis, invarian balancing (debit = credit), kompilasi batch relasional D1, kalkulasi agregat/tally, dan validasi status WAJIB berada di dalam **Deep Domain Modules** (`src/domain/`).
+  - Dilarang keras mengimpor `drizzle-orm/d1` langsung di dalam file `src/routes/*`. Seluruh interaksi database harus didelegasikan ke modul `src/domain/*`.
+  - Seluruh route handlers HTTP (`src/routes/*`) WAJIB mengimpor domain symbols secara strictly terpusat dari single seam index `../domain`. Guardrail ini ditegakkan secara mekanis via `tests/architecture-guardrail.test.ts`.
+  - Seluruh modul domain WAJIB diekspor terpusat melalui `src/domain/index.ts` sebagai single seam index.
 - **Wajib Audit Anti-AI-Slop via `design-taste-frontend`**:
   - **MANDAT KETAT**: Setiap penambahan, pembaruan, atau refactoring komponen dan antarmuka frontend (`src/views/`, layout HTML, styling CSS) **WAJIB diaudit menggunakan skill `design-taste-frontend`** (`node <skill>/scripts/inspect.mjs --app <url>`).
   - Dilarang keras membiarkan pola AI-slop template generik:
@@ -34,11 +39,6 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Setiap view / tab / menu WAJIB terhubung secara dinamis via API (`fetch('/api/...')`) ke database Cloudflare D1.
   - Setiap modal atau form create WAJIB melakukan `fetch('/api/...', { method: 'POST' })` nyata untuk persistensi data ke D1.
   - Setiap menu navigasi, tombol buat baru, filter, aksi baris tabel, dan avatar profil WAJIB memiliki event handler interaktif yang berfungsi (termasuk fitur logout dan switch account).
-- **Deep Modules & Clean Seams (Anti Shallow Controllers)**:
-  - **MANDAT KETAT**: Route handlers HTTP (`src/routes/`) WAJIB berupa adapter tipis (thin HTTP adapters). Seluruh aturan bisnis, invarian balancing (debit = credit), kompilasi batch relasional D1, kalkulasi agregat/tally, dan validasi status WAJIB berada di dalam **Deep Domain Modules** (`src/domain/`).
-  - Dilarang keras mengimpor `drizzle-orm/d1` langsung di dalam file `src/routes/*`. Seluruh interaksi database harus didelegasikan ke modul `src/domain/*`. Guardrail ini ditegakkan secara mekanis via `tests/architecture-guardrail.test.ts`.
-  - Seluruh modul domain WAJIB diekspor terpusat melalui `src/domain/index.ts` sebagai single seam index.
-  - Setiap modul domain harus lolos *deletion test* dan dapat diuji secara langsung (*the interface is the test surface*) tanpa harus membungkus atau menguji via lapisan request HTTP router.
 - **Arsitektur Pemisahan Kode UI & React Monolith Guardrail**:
   - Dilarang menumpuk ribuan baris HTML/JS interaktif di dalam template literal file server (`src/index.ts`).
   - Frontend SPA berbasis **React + Vite** di folder `frontend/` menyajikan UI type-safe yang terkompilasi ke `dist/client`.
@@ -48,20 +48,5 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Wajib jalankan `npm run build`, `npm run typecheck`, dan `npm run test` sebelum commit atau merge ke `main`.
   - Kolom SQL D1 wajib berformat `snake_case`, cocokkan dengan pemetaan `drizzle-orm` di `src/db/schema.ts`.
   - Transaksi akuntansi wajib berimbang Debit = Credit (`/api/finance/trial-balance`).
-  - Deploy live Cloudflare Workers menggunakan `npm run deploy` via Wrangler.
-- **UI State Lookup Standard**:
-  - **MANDAT KETAT**: Dilarang keras mengoper entire stale object ke dalam state setter (`handleEdit(item)`).
-  - Wajib mengoper ID item saja (`handleEdit(item.id)`) dan mengambil datanya dari state list atau query API berdasarkan ID.
-- **HTML Date Inputs**:
-  - Seluruh input form tanggal wajib menggunakan native `<input type="date">` untuk menjamin format ISO 8601 YYYY-MM-DD yang valid dan konsisten.
-- **Domain Type Safety**:
-  - Seluruh metode operasi create/update di domain module (`src/domain/*`) WAJIB memiliki parameter interface bertipe kuat (strongly typed), dilarang menggunakan `body: any` atau `data: any`. Gunakan utilitas compacting (`compactDefined`) untuk pembaruan parsial yang bersih tanpa boilerplate `if (x !== undefined)`.
-- **Client-Side Domain Isolation & Data Completeness**:
-  - Seluruh aturan isolasi domain frontend, penomoran dokumen di backend, dynamic tenant sourcing, dan data fetching completeness: **lihat `CODING_STANDARDS.md` §7**.
-- **Dynamic Academic Session & Tenant Resolution (Anti-Hardcoded Session)**:
-  - **MANDAT KETAT**: Dilarang keras menaruh string hardcoded tahun ajaran (e.g. `'2025/2026'`, `'ay_2026_2027'`) atau tenant ID statis di antarmuka frontend, payload form submission, maupun fallback domain backend.
-  - Sesi akademik (Tahun Ajaran aktif & Term/Semester aktif) WAJIB selalu diresolusi secara dinamis via query D1 (`academicYears.status = 'active'`, `terms.status = 'active'`) dan/atau state konteks frontend (`academicYears.find(...)`).
-  - Rekapitulasi header presensi (`attendance_sheets`) WAJIB selalu sinkron dan konsisten secara matematis dengan agregasi baris presensi (`attendance_lines`: present, sick, excused, absent).
-  - Scratch dan task planning internal (`.scratch/`) dilarang dimasukkan ke dalam version control tracking.
-
-
+- **Domain Integration & Client Rules Pointer**:
+  - Untuk aturan lengkap mengenai canonical parameter domain module, multi-child portal fallback, preview batch invoicing, dan isolasi domain frontend: **lihat `CODING_STANDARDS.md` §7 & §8**.

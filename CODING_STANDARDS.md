@@ -42,3 +42,14 @@
 - **UI State Lookup Standard**: Dilarang keras mengoper entire stale object ke dalam state setter (`handleEdit(item)`). Wajib mengoper ID item saja (`handleEdit(item.id)`) dan mengambil datanya dari state list atau query API berdasarkan ID.
 - **HTML Date Inputs**: Seluruh input form tanggal wajib menggunakan native `<input type="date">` untuk menjamin format ISO 8601 YYYY-MM-DD yang valid dan konsisten.
 - **Dual-Entity Modules View Completeness**: View yang mengelola master entitas berpasangan atau berkorelasi kuat (seperti Modul Akademik: Tahun Ajaran + Mata Pelajaran / Kurikulum) WAJIB menyediakan antarmuka manajemen UI lengkap untuk kedua entitas tersebut, bukan hanya salah satunya.
+
+## 8. Domain Integration & Service Seams (Odoo / OpenEduCat Model)
+- **Canonical D1 Parameter Signature & Types**:
+  - Seluruh fungsi di modul domain (`src/domain/*`) WAJIB menerima canonical `db: D1Database | any` (dan optional `rawDb?: D1Database`) serta strongly-typed parameter interface.
+  - Dilarang membocorkan loose signature seperti `(db: any, rawDb: D1Database)` yang memaksa adapter route memisahkan atau membungkus D1 context secara redundan.
+- **Mandatory Use of Single Seam Index (`../domain`)**:
+  - Seluruh route handlers HTTP (`src/routes/*`) WAJIB mengimpor domain symbols secara strictly terpusat dari single seam index `../domain` (bukan `../domain/admission`, `../domain/fees`, atau file modular parsial lainnya). Aturan ini ditegakkan secara mekanis via `tests/architecture-guardrail.test.ts`.
+- **Multi-Child Guardian Fallback in Portal Queries**:
+  - Jika seorang wali murid (guardian) memiliki beberapa anak terkait dan `targetStudentId` tidak dispesifikasikan dalam query parameter, domain `assertPortalAccess` dan router portal WAJIB secara aman fallback ke anak pertama yang terhubung (`scope.studentIds[0]`) tanpa melempar HTTP 403 Forbidden.
+- **Invoicing Preview Requirement Before Batch Postings**:
+  - Seluruh alur batch fee invoicing di frontend WAJIB menyajikan tahapan pratinjau (preview modal / confirmation dialog) yang menampilkan jumlah siswa eligible teridentifikasi dan total estimasi nominal rupiah sebelum mengeksekusi operasi posting ke D1 database.
