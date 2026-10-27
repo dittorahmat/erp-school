@@ -403,3 +403,42 @@ export interface PayslipBatchRun {
   status: 'draft' | 'confirmed';
   createdAt: number | string;
 }
+
+export interface Assignment {
+  id: string;
+  schoolId: string;
+  classroomId: string;
+  classroomName?: string;
+  subjectId: string;
+  subjectName?: string;
+  facultyId: string;
+  facultyName?: string;
+  examSessionId?: string | null;
+  title: string;
+  description: string;
+  dueDate: string;
+  maxScore: number;
+  weightage?: number;
+  status: 'draft' | 'published' | 'closed';
+  createdAt?: string | number;
+  submission?: AssignmentSubmission | null;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  schoolId?: string;
+  assignmentId: string;
+  studentId: string;
+  studentName?: string;
+  studentNis?: string;
+  submissionDate: string;
+  content: string;
+  fileUrl?: string | null;
+  score?: number | null;
+  grade?: string | null;
+  feedback?: string | null;
+  status: 'submitted' | 'graded' | 'late' | 'resubmit';
+  createdAt?: string | number;
+  updatedAt?: string | number;
+}
+

@@ -571,3 +571,40 @@ export const payslips = sqliteTable('payslips', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
 
+// --------------------------------------------------------------------------
+// Assignment & LMS (OpenEduCat op.assignment & op.assignment.submisssion style)
+// --------------------------------------------------------------------------
+export const assignments = sqliteTable('assignments', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  classroomId: text('classroom_id').notNull().references(() => classrooms.id),
+  subjectId: text('subject_id').notNull().references(() => subjects.id),
+  facultyId: text('faculty_id').notNull().references(() => faculties.id),
+  examSessionId: text('exam_session_id').references(() => examSessions.id),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  dueDate: text('due_date').notNull(), // ISO Date or YYYY-MM-DD
+  maxScore: real('max_score').notNull().default(100),
+  weightage: integer('weightage').default(10), // e.g. 10%
+  status: text('status').notNull().default('published'), // draft, published, closed
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const assignmentSubmissions = sqliteTable('assignment_submissions', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  assignmentId: text('assignment_id').notNull().references(() => assignments.id, { onDelete: 'cascade' }),
+  studentId: text('student_id').notNull().references(() => students.id),
+  submissionDate: text('submission_date').notNull(),
+  content: text('content').notNull(), // text response or notes
+  fileUrl: text('file_url'), // Link / Cloudflare R2 file URL
+  score: real('score'),
+  grade: text('grade'), // A, B, C, D
+  feedback: text('feedback'),
+  status: text('status').notNull().default('submitted'), // submitted, graded, late, resubmit
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+

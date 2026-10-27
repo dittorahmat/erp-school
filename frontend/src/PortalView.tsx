@@ -16,9 +16,15 @@ interface PortalViewProps {
 export default function PortalView({ currentUser }: PortalViewProps) {
   const [data, setData] = useState<PortalOverviewResponse | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'timetable' | 'attendance' | 'grades' | 'invoices' | 'payslips'>('timetable');
+  const [activeTab, setActiveTab] = useState<'timetable' | 'attendance' | 'grades' | 'invoices' | 'payslips' | 'lms'>('timetable');
   const [payslips, setPayslips] = useState<any[]>([]);
   const [selectedSlip, setSelectedSlip] = useState<any | null>(null);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
+  const [submissionContent, setSubmissionContent] = useState('');
+  const [submissionFileUrl, setSubmissionFileUrl] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,8 +60,22 @@ export default function PortalView({ currentUser }: PortalViewProps) {
       const overview: PortalOverviewResponse = json.data;
       setData(overview);
       setPayslips(slipJson.data || []);
+      const activeStudent = studentId || overview.selectedStudentId;
       if (overview.selectedStudentId && !selectedStudentId) {
         setSelectedStudentId(overview.selectedStudentId);
+      }
+
+      // Fetch student assignments if active student found
+      if (activeStudent) {
+        try {
+          const lmsRes = await fetch(`/api/lms/students/${encodeURIComponent(activeStudent)}/assignments`);
+          const lmsJson = await lmsRes.json();
+          if (lmsJson.success) {
+            setAssignments(lmsJson.data || []);
+          }
+        } catch {
+          // ignore error if lms fetch fails silently
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan sistem saat memuat portal');
@@ -235,6 +255,23 @@ export default function PortalView({ currentUser }: PortalViewProps) {
           {payslips.length > 0 && (
             <span className="ml-1 px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold">
               {payslips.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('lms')}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
+            activeTab === 'lms'
+              ? 'border-[#714B67] text-[#714B67] bg-white'
+              : 'border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300'
+          }`}
+        >
+          <i className="fa-solid fa-book-open"></i>
+          Tugas & LMS
+          {assignments.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.2 bg-purple-100 text-[#714B67] rounded text-[10px] font-bold">
+              {assignments.length}
             </span>
           )}
         </button>
@@ -597,6 +634,221 @@ export default function PortalView({ currentUser }: PortalViewProps) {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tab: LMS & Assignment */}
+      {activeTab === 'lms' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-base font-bold text-slate-800">Tugas & Materi Belajar (LMS)</h2>
+              <p className="text-xs text-slate-600">
+                Kerjakan tugas yang diberikan guru kelas, unggah tautan hasil kerja, dan pantau umpan balik penilaian.
+              </p>
+            </div>
+            {submitSuccess && (
+              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded">
+                <i className="fa-solid fa-check mr-1"></i> {submitSuccess}
+              </span>
+            )}
+          </div>
+
+          {assignments.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-lg p-8 text-center text-slate-500 text-xs">
+              <i className="fa-regular fa-folder-open text-2xl text-slate-400 mb-2 block"></i>
+              Belum ada tugas yang diterbitkan untuk kelas ini.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {assignments.map((asgn) => {
+                const sub = asgn.submission;
+                const isOverdue = asgn.dueDate && new Date().toISOString().split('T')[0] > asgn.dueDate;
+                return (
+                  <div
+                    key={asgn.id}
+                    className="bg-white border border-slate-200 rounded-lg p-5 shadow-2xs hover:border-slate-300 transition flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-[11px] font-semibold text-purple-800 bg-purple-50 px-2 py-0.5 rounded">
+                          {asgn.subjectName || 'Mata Pelajaran'}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                            sub?.status === 'graded'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : sub?.status === 'submitted'
+                              ? 'bg-blue-100 text-blue-800'
+                              : isOverdue
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {sub?.status === 'graded'
+                            ? `Dinilai: ${sub.score} (${sub.grade})`
+                            : sub?.status === 'submitted'
+                            ? 'Sudah Diserahkan'
+                            : isOverdue
+                            ? 'Terlambat'
+                            : 'Belum Selesai'}
+                        </span>
+                      </div>
+
+                      <h3 className="font-bold text-slate-800 text-sm mb-1">{asgn.title}</h3>
+                      <p className="text-xs text-slate-600 line-clamp-2 mb-3">{asgn.description}</p>
+
+                      <div className="space-y-1 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+                        <div>
+                          <span className="text-slate-400">Guru Pengampu:</span>{' '}
+                          <span className="text-slate-700 font-medium">{asgn.facultyName || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Batas Waktu:</span>{' '}
+                          <span className="text-slate-700 font-medium">{asgn.dueDate}</span>
+                        </div>
+                        {sub?.feedback && (
+                          <div className="bg-slate-50 p-2 rounded border border-slate-200 mt-2">
+                            <span className="text-slate-500 font-semibold block text-[10px] uppercase">Catatan / Feedback Guru:</span>
+                            <span className="text-slate-700 italic">{sub.feedback}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-400 font-medium">Bobot: {asgn.weightage || 10}%</span>
+                      <button
+                        onClick={() => {
+                          setSelectedAssignment(asgn);
+                          setSubmissionContent(sub?.content || '');
+                          setSubmissionFileUrl(sub?.fileUrl || '');
+                        }}
+                        className="bg-[#714B67] hover:bg-[#583950] text-white px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1.5"
+                      >
+                        <i className="fa-solid fa-file-pen text-[11px]"></i>
+                        {sub ? 'Lihat / Edit Pengumpulan' : 'Kumpulkan Tugas'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Submission Modal */}
+      {selectedAssignment && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+              <div>
+                <span className="text-[10px] font-bold text-purple-700 uppercase bg-purple-50 px-2 py-0.5 rounded">
+                  {selectedAssignment.subjectName}
+                </span>
+                <h3 className="font-bold text-slate-800 text-sm mt-1">{selectedAssignment.title}</h3>
+              </div>
+              <button
+                onClick={() => setSelectedAssignment(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs mb-4">
+              <div className="bg-slate-50 p-3 rounded border border-slate-200 text-slate-700 whitespace-pre-wrap">
+                {selectedAssignment.description}
+              </div>
+              <div className="flex justify-between text-slate-500 text-[11px]">
+                <span>Tenggat Waktu: <strong>{selectedAssignment.dueDate}</strong></span>
+                <span>Nilai Maksimal: <strong>{selectedAssignment.maxScore}</strong></span>
+              </div>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const activeStudent = selectedStudentId || data?.selectedStudentId;
+                if (!activeStudent) {
+                  alert('Siswa aktif tidak teridentifikasi');
+                  return;
+                }
+                setSubmitting(true);
+                try {
+                  const res = await fetch('/api/lms/submissions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      assignmentId: selectedAssignment.id,
+                      studentId: activeStudent,
+                      content: submissionContent,
+                      fileUrl: submissionFileUrl || undefined,
+                    }),
+                  });
+                  const json = await res.json();
+                  if (json.success) {
+                    setSubmitSuccess('Tugas berhasil dikumpulkan!');
+                    setSelectedAssignment(null);
+                    fetchPortalData(activeStudent);
+                    setTimeout(() => setSubmitSuccess(null), 4000);
+                  } else {
+                    alert('Gagal mengumpulkan tugas: ' + json.error);
+                  }
+                } catch (err: any) {
+                  alert('Kesalahan jaringan: ' + err.message);
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Uraian Jawaban / Catatan Tugas:
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={submissionContent}
+                  onChange={(e) => setSubmissionContent(e.target.value)}
+                  placeholder="Tuliskan uraian ringkasan jawaban tugas di sini..."
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Tautan Berkas / Link Dokumen (Opsional):
+                </label>
+                <input
+                  type="url"
+                  value={submissionFileUrl}
+                  onChange={(e) => setSubmissionFileUrl(e.target.value)}
+                  placeholder="https://drive.google.com/... atau tautan berkas R2"
+                  className="w-full text-xs p-2 border border-slate-300 rounded focus:border-[#714B67] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAssignment(null)}
+                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-1.5 bg-[#714B67] hover:bg-[#583950] text-white rounded text-xs font-semibold cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? 'Mengirim...' : 'Kirim Tugas'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
