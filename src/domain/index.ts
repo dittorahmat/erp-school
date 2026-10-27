@@ -9,3 +9,4 @@ export * from "./fees";
 export * from "./library";
 export * from "./portal";
 export * from "./payroll";
+export * from "./assets";

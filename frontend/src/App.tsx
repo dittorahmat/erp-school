@@ -4,6 +4,7 @@ import AdmissionView from './AdmissionView';
 import LibraryView from './LibraryView';
 import PortalView from './PortalView';
 import { PayrollView } from './PayrollView';
+import { AssetsView } from './AssetsView';
 import {
   DEMO_USERS,
   UserProfile,
@@ -422,7 +423,7 @@ export default function App() {
           <nav className="hidden md:flex space-x-1 text-xs pl-3 overflow-x-auto">
             {(currentUser.role === 'student' || currentUser.role === 'guardian'
               ? ['portal']
-              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'payroll', 'inventory', 'library', 'portal']
+              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'assets', 'payroll', 'inventory', 'library', 'portal']
             ).map((view) => (
               <button
                 key={view}
@@ -443,6 +444,8 @@ export default function App() {
                   ? 'Ujian & Nilai'
                   : view === 'finance'
                   ? 'Keuangan (SPP)'
+                  : view === 'assets'
+                  ? 'Aset Tetap'
                   : view === 'payroll'
                   ? 'HR & Penggajian'
                   : view === 'inventory'
@@ -544,6 +547,7 @@ export default function App() {
           <>
             {currentView === 'admission' && <AdmissionView />}
             {currentView === 'library' && <LibraryView />}
+            {currentView === 'assets' && <AssetsView />}
             {currentView === 'payroll' && <PayrollView />}
             {currentView === 'portal' && <PortalView currentUser={currentUser} />}
 

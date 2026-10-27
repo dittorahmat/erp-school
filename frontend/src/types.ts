@@ -403,3 +403,42 @@ export interface PayslipBatchRun {
   status: 'draft' | 'confirmed';
   createdAt: number | string;
 }
+
+export interface FixedAsset {
+  id: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  category: 'equipment' | 'vehicle' | 'building' | 'electronic';
+  purchaseDate: string;
+  purchaseValue: number;
+  salvageValue: number;
+  depreciableValue: number;
+  method: string;
+  durationMonths: number;
+  assetAccountId: string;
+  depreciationAccountId: string;
+  expenseAccountId: string;
+  journalId: string;
+  status: 'draft' | 'running' | 'depreciated' | 'disposed';
+  notes?: string | null;
+  createdAt?: number | string;
+  lines?: AssetDepreciationLine[];
+}
+
+export interface AssetDepreciationLine {
+  id: string;
+  assetId: string;
+  schoolId: string;
+  sequence: number;
+  depreciationDate: string;
+  amount: number;
+  accumulatedAmount: number;
+  remainingValue: number;
+  status: 'draft' | 'posted' | 'cancelled';
+  moveId?: string | null;
+  assetName?: string;
+  assetCode?: string;
+  createdAt?: number | string;
+}
+
