@@ -105,15 +105,19 @@ export const examManagement = {
 
   async getReportCard(d1: D1Database, studentId: string) {
     const db = drizzle(d1, { schema });
-    const marks = await db
-      .select()
-      .from(schema.examMarks)
-      .where(eq(schema.examMarks.studentId, studentId));
+    const [marks, activeTerms, activeYears] = await Promise.all([
+      db.select().from(schema.examMarks).where(eq(schema.examMarks.studentId, studentId)),
+      db.select().from(schema.terms).where(eq(schema.terms.status, "active")).limit(1),
+      db.select().from(schema.academicYears).where(eq(schema.academicYears.status, "active")).limit(1),
+    ]);
+
+    const termName = activeTerms[0]?.name || "Semester Ganjil";
+    const yearName = activeYears[0]?.name || "2026/2027";
 
     return {
       studentId,
       status: "published",
-      term: "Semester Ganjil 2025/2026",
+      term: `${termName} ${yearName}`,
       summary: {
         totalSubjects: marks.length,
         averageScore: marks.length > 0 ? (marks.reduce((a, b) => a + b.marksObtained, 0) / marks.length).toFixed(1) : 0,

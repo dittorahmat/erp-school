@@ -218,7 +218,7 @@ export const odooShellHtml = `<!DOCTYPE html>
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
         <div>
           <h3 class="font-bold text-slate-800 text-base">Rapor Digital Akademik</h3>
-          <p class="text-xs text-slate-500 mt-0.5" id="report-modal-subtitle">Semester Ganjil 2025/2026</p>
+          <p class="text-xs text-slate-500 mt-0.5" id="report-modal-subtitle">Semester Ganjil 2026/2027</p>
         </div>
         <button onclick="closeReportModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-base"></i></button>
       </div>
@@ -385,7 +385,7 @@ export const odooShellHtml = `<!DOCTYPE html>
             '<div class="flex justify-between items-center py-1 border-b border-slate-100"><span>Pembayaran SPP Siswa Andi Pratama</span><span class="font-mono text-emerald-700 font-medium">Rp 500.000 Lunas</span></div>' +
             '<div class="flex justify-between items-center py-1 border-b border-slate-100"><span>Presensi Kelas X-MIPA-1 Sesi Matematika Wajib</span><span class="text-slate-500">Selesai 09:00</span></div>' +
             '<div class="flex justify-between items-center py-1 border-b border-slate-100"><span>Penerimaan Stok Buku Matematika Kelas 10</span><span class="text-slate-500">80 pcs di Gudang Utama</span></div>' +
-            '<div class="flex justify-between items-center py-1"><span>Publikasi Nilai UTS Semester Ganjil 2025/2026</span><span class="text-slate-500">KKM 75</span></div>' +
+            '<div class="flex justify-between items-center py-1"><span>Publikasi Nilai UTS Semester Ganjil 2026/2027</span><span class="text-slate-500">KKM 75</span></div>' +
           '</div>' +
         '</div>' +
         '<div class="bg-white rounded border border-slate-200 p-5">' +
@@ -614,7 +614,7 @@ export const odooShellHtml = `<!DOCTYPE html>
 
         var html = '<div class="bg-white rounded border border-slate-200 overflow-hidden">' +
           '<div class="p-3.5 border-b border-slate-200 flex items-center justify-between">' +
-            '<h3 class="font-bold text-slate-800 text-xs">Sesi Ujian Semester Ganjil 2025/2026</h3>' +
+            '<h3 class="font-bold text-slate-800 text-xs">Sesi Ujian Semester Ganjil 2026/2027</h3>' +
             '<button onclick="navigate(&apos;exams&apos;)" class="text-xs text-purple-700 font-medium hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>' +
           '</div>' +
           '<table class="w-full text-left text-xs text-slate-700">' +
@@ -1673,7 +1673,7 @@ export const odooShellHtml = `<!DOCTYPE html>
         var student = json.student || {};
         var marks = json.marks || [];
 
-        subtitle.innerText = 'Siswa: ' + (student.name || studentId) + ' (NIS: ' + (student.nis || '-') + ') | Semester Ganjil 2025/2026';
+        subtitle.innerText = 'Siswa: ' + (student.name || studentId) + ' (NIS: ' + (student.nis || '-') + ') | Semester Ganjil 2026/2027';
 
         var html = '<div class="grid grid-cols-3 gap-3 p-3 bg-purple-50 rounded border border-purple-100 text-xs">' +
           '<div><span class="text-slate-500 block">Total Mata Pelajaran</span><span class="font-bold text-slate-800 text-sm">' + marks.length + ' Mapel</span></div>' +

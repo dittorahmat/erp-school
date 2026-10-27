@@ -20,3 +20,6 @@ Thumbs.db
 # Taste skill artifacts
 .taste-skill/
 
+# Scratch & Temporary agent files
+.scratch/
+

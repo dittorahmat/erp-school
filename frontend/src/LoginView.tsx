@@ -37,6 +37,17 @@ export default function LoginView({ onLogin }: LoginViewProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [activeYear, setActiveYear] = useState<string>('');
+
+  React.useEffect(() => {
+    fetch('/api/academic/years')
+      .then((r) => r.json())
+      .then((res) => {
+        const found = (res.data || []).find((y: any) => y.status === 'active');
+        if (found) setActiveYear(found.name);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleManualLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +113,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
           </div>
           <div className="text-xs text-purple-100 hidden sm:flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>Tahun Ajaran 2025/2026 Aktif</span>
+            <span>Tahun Ajaran {activeYear || '2026/2027'} Aktif</span>
           </div>
         </div>
       </header>
