@@ -12,6 +12,7 @@ import { odooShellHtml } from "./views/shell";
 export type Bindings = {
   DB: D1Database;
   STORAGE: R2Bucket;
+  ASSETS?: Fetcher;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
 };
@@ -43,8 +44,13 @@ app.on(["POST", "GET"], "/api/auth/**", async (c) => {
   return auth.handler(c.req.raw);
 });
 
-// Full Odoo-Style SPA Shell (Interactive Navigation, Modals, Dynamic CRUD & Switch-Account/Logout)
-app.get("*", (c) => {
+// Single Page Application Root & Static Assets Handler:
+// In Cloudflare Workers with Static Assets binding (env.ASSETS), delegate non-API requests
+// to the compiled React Vite SPA in dist/client. Fallback to shell template during test mock env.
+app.get("*", async (c) => {
+  if (c.env?.ASSETS) {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
   return c.html(odooShellHtml);
 });
 

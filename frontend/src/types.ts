@@ -5,6 +5,135 @@ export interface UserProfile {
   avatar: string;
 }
 
+export interface Student {
+  id: string;
+  schoolId: string;
+  userId?: string | null;
+  guardianId?: string | null;
+  nis: string;
+  nisn: string;
+  name: string;
+  gender: 'male' | 'female';
+  birthDate?: string | null;
+  birthPlace?: string | null;
+  address?: string | null;
+  status: 'active' | 'graduated' | 'dropped';
+}
+
+export interface AcademicYear {
+  id: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  startDate: string;
+  endDate: string;
+  status: 'draft' | 'active' | 'closed';
+}
+
+export interface Subject {
+  id: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  type: string;
+  weightage: number;
+}
+
+export interface Timetable {
+  id: string;
+  schoolId: string;
+  classroomId: string;
+  subjectId: string;
+  facultyId: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface AttendanceSheet {
+  id: string;
+  schoolId: string;
+  classroomId: string;
+  facultyId: string;
+  timetableId?: string | null;
+  date: string;
+  status: string;
+  totalPresent: number;
+  totalAbsent: number;
+  totalSick: number;
+  totalExcused: number;
+}
+
+export interface ExamSession {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  termId: string;
+  classroomId: string;
+  subjectId: string;
+  name: string;
+  examDate: string;
+  totalMarks: number;
+  passingMarks: number;
+  weightage: number;
+  status: 'draft' | 'published' | 'closed';
+}
+
+export interface Invoice {
+  id: string;
+  schoolId: string;
+  journalId: string;
+  studentId?: string | null;
+  name: string;
+  date: string;
+  moveType: string;
+  amountTotal: number;
+  amountResidual: number;
+  state: string;
+  paymentState: 'not_paid' | 'paid' | 'partial';
+  invoiceDueDate?: string | null;
+}
+
+export interface InventoryProduct {
+  id: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  type: 'storable' | 'consumable' | 'service' | 'asset';
+  uom: string;
+  listPrice?: number;
+  standardPrice?: number;
+  serialNumber?: string | null;
+}
+
+export interface TrialBalanceReport {
+  totalDebit: number;
+  totalCredit: number;
+  isBalanced: boolean;
+  lineCount: number;
+}
+
+export interface ReportCardGrade {
+  id: string;
+  sessionId: string;
+  studentId: string;
+  marksObtained: number;
+  grade: string;
+  remark?: string | null;
+  subjectName?: string;
+}
+
+export interface ReportCardResponse {
+  studentId: string;
+  status: string;
+  term: string;
+  summary: {
+    totalSubjects: number;
+    averageScore: string | number;
+  };
+  grades: ReportCardGrade[];
+}
+
 export const DEMO_USERS: Record<string, UserProfile> = {
   admin: {
     name: 'Bambang Sudarmono, M.Pd',

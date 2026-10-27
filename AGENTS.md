@@ -39,11 +39,13 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Dilarang keras mengimpor `drizzle-orm/d1` langsung di dalam file `src/routes/*`. Seluruh interaksi database harus didelegasikan ke modul `src/domain/*`. Guardrail ini ditegakkan secara mekanis via `tests/architecture-guardrail.test.ts`.
   - Seluruh modul domain WAJIB diekspor terpusat melalui `src/domain/index.ts` sebagai single seam index.
   - Setiap modul domain harus lolos *deletion test* dan dapat diuji secara langsung (*the interface is the test surface*) tanpa harus membungkus atau menguji via lapisan request HTTP router.
-- **Arsitektur Pemisahan Kode UI**:
+- **Arsitektur Pemisahan Kode UI & React Monolith Guardrail**:
   - Dilarang menumpuk ribuan baris HTML/JS interaktif di dalam template literal file server (`src/index.ts`).
-  - Selalu pisahkan ke dalam folder view modular (`src/views/`) agar terhindar dari syntax/parsing error template string nested backticks.
+  - Frontend SPA berbasis **React + Vite** di folder `frontend/` menyajikan UI type-safe yang terkompilasi ke `dist/client`.
+  - Cloudflare Workers Static Assets binding (`assets: { directory: "./dist/client", html_handling: "single-page-application", not_found_handling: "single-page-application" }`) wajib dikonfigurasi di `wrangler.jsonc` untuk menyajikan SPA secara native tanpa CORS.
+  - Seluruh tombol create/modal WAJIB merender form fungsional nyata ke API D1; dilarang keras menaruh fallback nama/data hardcoded (e.g. ternary fallback dummy string).
 - **Pemeriksaan & Build Wajib**:
-  - Wajib jalankan `npm run typecheck` dan `npm run test` sebelum commit atau merge ke `main`.
+  - Wajib jalankan `npm run build`, `npm run typecheck`, dan `npm run test` sebelum commit atau merge ke `main`.
   - Kolom SQL D1 wajib berformat `snake_case`, cocokkan dengan pemetaan `drizzle-orm` di `src/db/schema.ts`.
   - Transaksi akuntansi wajib berimbang Debit = Credit (`/api/finance/trial-balance`).
   - Deploy live Cloudflare Workers menggunakan `npm run deploy` via Wrangler.

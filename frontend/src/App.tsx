@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { DEMO_USERS, UserProfile } from './types';
+import {
+  DEMO_USERS,
+  UserProfile,
+  Student,
+  AcademicYear,
+  Subject,
+  Timetable,
+  AttendanceSheet,
+  ExamSession,
+  Invoice,
+  InventoryProduct,
+  TrialBalanceReport,
+  ReportCardResponse
+} from './types';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
@@ -8,26 +21,28 @@ export default function App() {
   });
   const [currentView, setCurrentView] = useState<string>('dashboard');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  // Data states
-  const [students, setStudents] = useState<any[]>([]);
-  const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [timetables, setTimetables] = useState<any[]>([]);
-  const [attendanceSheets, setAttendanceSheets] = useState<any[]>([]);
-  const [exams, setExams] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [trialBalance, setTrialBalance] = useState<any>(null);
-  const [inventory, setInventory] = useState<any[]>([]);
+  // Strongly-typed Data states
+  const [students, setStudents] = useState<Student[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [timetables, setTimetables] = useState<Timetable[]>([]);
+  const [attendanceSheets, setAttendanceSheets] = useState<AttendanceSheet[]>([]);
+  const [exams, setExams] = useState<ExamSession[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [trialBalance, setTrialBalance] = useState<TrialBalanceReport | null>(null);
+  const [inventory, setInventory] = useState<InventoryProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Modals
-  const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [editItem, setEditItem] = useState<any>(null);
-  const [paymentTarget, setPaymentTarget] = useState<any>(null);
-  const [reportStudentId, setReportStudentId] = useState<string | null>(null);
-  const [reportData, setReportData] = useState<any>(null);
+  const [activeModal, setActiveModal] = useState<'create' | 'payment' | 'report' | 'mark' | null>(null);
+  const [paymentTarget, setPaymentTarget] = useState<Invoice | null>(null);
+  const [reportData, setReportData] = useState<ReportCardResponse | null>(null);
+  const [selectedStudentForReport, setSelectedStudentForReport] = useState<Student | null>(null);
+  const [markTargetExam, setMarkTargetExam] = useState<ExamSession | null>(null);
+
+  // Create Modal Sub-tab for Academics
+  const [academicTab, setAcademicTab] = useState<'year' | 'subject'>('year');
 
   // Switch User Persona
   const switchUser = (key: string) => {
@@ -40,11 +55,11 @@ export default function App() {
     }
   };
 
-  // Fetch view data
+  // Fetch view data dynamically from D1
   const fetchData = async () => {
     setLoading(true);
     try {
-      if (currentView === 'students' || currentView === 'dashboard') {
+      if (currentView === 'students' || currentView === 'dashboard' || currentView === 'attendance' || currentView === 'exams') {
         const res = await fetch('/api/students');
         const json = await res.json();
         setStudents(json.data || []);
@@ -100,12 +115,12 @@ export default function App() {
     fetchData();
   }, [currentView]);
 
-  // Open Report Card
-  const openReportCard = async (studentId: string) => {
-    setReportStudentId(studentId);
+  // Open Report Card Modal
+  const openReportCard = async (student: Student) => {
+    setSelectedStudentForReport(student);
     try {
-      const res = await fetch(`/api/exams/report-card/${studentId}`);
-      const data = await res.json();
+      const res = await fetch(`/api/exams/report-card/${student.id}`);
+      const data: ReportCardResponse = await res.json();
       setReportData(data);
       setActiveModal('report');
     } catch (err: any) {
@@ -114,14 +129,21 @@ export default function App() {
   };
 
   // Open Payment Modal
-  const openPaymentModal = (invoice: any) => {
+  const openPaymentModal = (invoice: Invoice) => {
     setPaymentTarget(invoice);
     setActiveModal('payment');
+  };
+
+  // Open Grade Entry Modal
+  const openGradeModal = (exam: ExamSession) => {
+    setMarkTargetExam(exam);
+    setActiveModal('mark');
   };
 
   // Submit Payment
   const handlePaymentSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!paymentTarget) return;
     const form = e.currentTarget;
     const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value);
     const method = (form.elements.namedItem('method') as HTMLSelectElement).value;
@@ -152,7 +174,152 @@ export default function App() {
     }
   };
 
-  // Delete Handlers
+  // Submit Grade Entry
+  const handleGradeSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!markTargetExam) return;
+    const form = e.currentTarget;
+    const studentId = (form.elements.namedItem('studentId') as HTMLSelectElement).value;
+    const marksObtained = Number((form.elements.namedItem('marksObtained') as HTMLInputElement).value);
+    const remark = (form.elements.namedItem('remark') as HTMLInputElement).value;
+
+    try {
+      const res = await fetch('/api/exams/marks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: markTargetExam.id,
+          studentId,
+          marksObtained,
+          remark: remark || null
+        })
+      });
+      if (!res.ok) throw new Error('Gagal mencatat nilai ujian');
+      alert('Nilai ujian berhasil dicatat ke D1!');
+      setActiveModal(null);
+      fetchData();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  // Submit Dynamic Creation (Student, Academic Year, Subject, Attendance, Product, Invoice)
+  const handleCreateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+
+    try {
+      if (currentView === 'students') {
+        const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+        const nis = (form.elements.namedItem('nis') as HTMLInputElement).value;
+        const nisn = (form.elements.namedItem('nisn') as HTMLInputElement).value;
+        const gender = (form.elements.namedItem('gender') as HTMLSelectElement).value;
+
+        const res = await fetch('/api/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schoolId: 'school_sma_hb', name, nis, nisn, gender, status: 'active' })
+        });
+        if (!res.ok) throw new Error('Gagal menambah siswa');
+      } else if (currentView === 'academics') {
+        if (academicTab === 'year') {
+          const name = (form.elements.namedItem('yearName') as HTMLInputElement).value;
+          const code = (form.elements.namedItem('yearCode') as HTMLInputElement).value;
+          const startDate = (form.elements.namedItem('startDate') as HTMLInputElement).value;
+          const endDate = (form.elements.namedItem('endDate') as HTMLInputElement).value;
+          const res = await fetch('/api/academic/years', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schoolId: 'school_sma_hb', name, code, startDate, endDate, status: 'active' })
+          });
+          if (!res.ok) throw new Error('Gagal menambah tahun ajaran');
+        } else {
+          const name = (form.elements.namedItem('subjName') as HTMLInputElement).value;
+          const code = (form.elements.namedItem('subjCode') as HTMLInputElement).value;
+          const type = (form.elements.namedItem('subjType') as HTMLSelectElement).value;
+          const res = await fetch('/api/academic/subjects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schoolId: 'school_sma_hb', name, code, type, weightage: 100 })
+          });
+          if (!res.ok) throw new Error('Gagal menambah mata pelajaran');
+        }
+      } else if (currentView === 'attendance') {
+        const date = (form.elements.namedItem('attDate') as HTMLInputElement).value;
+        const student1 = students[0]?.id || 'std_andi';
+        const student2 = students[1]?.id || 'std_bella';
+
+        const res = await fetch('/api/attendance/sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schoolId: 'school_sma_hb',
+            classroomId: 'cls_x_ipa_1',
+            facultyId: 'fac_budi',
+            timetableId: 'tt_mon_mat',
+            date,
+            status: 'confirmed',
+            lines: [
+              { studentId: student1, status: 'present', remark: 'Hadir' },
+              { studentId: student2, status: 'present', remark: 'Hadir' }
+            ]
+          })
+        });
+        if (!res.ok) throw new Error('Gagal membuat sesi presensi');
+      } else if (currentView === 'exams') {
+        const name = (form.elements.namedItem('examName') as HTMLInputElement).value;
+        const examDate = (form.elements.namedItem('examDate') as HTMLInputElement).value;
+        const passingMarks = Number((form.elements.namedItem('passingMarks') as HTMLInputElement).value);
+        const weightage = Number((form.elements.namedItem('weightage') as HTMLInputElement).value);
+
+        const res = await fetch('/api/exams/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schoolId: 'school_sma_hb',
+            academicYearId: 'ay_2025_2026',
+            termId: 'term_sem1',
+            classroomId: 'cls_x_ipa_1',
+            subjectId: 'sbj_mat',
+            name,
+            examDate,
+            totalMarks: 100,
+            passingMarks,
+            weightage,
+            status: 'published'
+          })
+        });
+        if (!res.ok) throw new Error('Gagal membuat sesi ujian');
+      } else if (currentView === 'inventory') {
+        const name = (form.elements.namedItem('prodName') as HTMLInputElement).value;
+        const code = (form.elements.namedItem('prodCode') as HTMLInputElement).value;
+        const price = Number((form.elements.namedItem('prodPrice') as HTMLInputElement).value);
+        const type = (form.elements.namedItem('prodType') as HTMLSelectElement).value;
+
+        const res = await fetch('/api/inventory/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schoolId: 'school_sma_hb',
+            name,
+            code,
+            standardPrice: price,
+            listPrice: price,
+            type,
+            uom: 'pcs'
+          })
+        });
+        if (!res.ok) throw new Error('Gagal menambah produk inventaris');
+      }
+
+      setActiveModal(null);
+      fetchData();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  // Delete Action
   const handleDelete = async (endpoint: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus "${name}"?`)) return;
     try {
@@ -165,6 +332,13 @@ export default function App() {
     } catch (err: any) {
       alert('Error: ' + err.message);
     }
+  };
+
+  // Helper to resolve student name dynamically from student list
+  const getStudentName = (studentId?: string | null) => {
+    if (!studentId) return 'Umum / Tidak Terikat';
+    const found = students.find((s) => s.id === studentId);
+    return found ? found.name : studentId;
   };
 
   return (
@@ -236,8 +410,8 @@ export default function App() {
                   <button
                     onClick={() => {
                       localStorage.removeItem('erp_user');
-                      setLoginModalOpen(true);
                       setUserDropdownOpen(false);
+                      switchUser('admin');
                     }}
                     className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-2"
                   >
@@ -261,18 +435,15 @@ export default function App() {
         <div className="flex items-center space-x-2">
           {currentView !== 'dashboard' && (
             <button
-              onClick={() => {
-                setEditItem(null);
-                setActiveModal('create');
-              }}
-              className="bg-[#714B67] hover:bg-[#583950] text-white px-3 py-1.5 rounded text-xs font-semibold transition flex items-center gap-1.5"
+              onClick={() => setActiveModal('create')}
+              className="bg-[#714B67] hover:bg-[#583950] text-white px-3 py-1.5 rounded text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
             >
               <i className="fa-solid fa-plus text-[10px]"></i> Tambah Data
             </button>
           )}
           <button
             onClick={fetchData}
-            className="text-xs text-purple-700 font-medium hover:underline px-2 py-1 flex items-center gap-1"
+            className="text-xs text-purple-700 font-medium hover:underline px-2 py-1 flex items-center gap-1 cursor-pointer"
           >
             <i className="fa-solid fa-rotate-right"></i> Refresh
           </button>
@@ -290,8 +461,8 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div onClick={() => setCurrentView('students')} className="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">
                     <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Total Siswa Terdaftar</div>
-                    <div className="text-2xl font-bold text-slate-800 mt-1">{students.length || 2}</div>
-                    <div className="text-xs text-emerald-700 mt-1 font-medium">100% Aktif di X-MIPA-1</div>
+                    <div className="text-2xl font-bold text-slate-800 mt-1">{students.length}</div>
+                    <div className="text-xs text-emerald-700 mt-1 font-medium">Terdaftar di Kelas X-MIPA-1</div>
                   </div>
                   <div onClick={() => setCurrentView('attendance')} className="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">
                     <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Presensi Terakhir</div>
@@ -301,13 +472,15 @@ export default function App() {
                   <div onClick={() => setCurrentView('finance')} className="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">
                     <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Neraca Saldo (Trial Balance)</div>
                     <div className="text-2xl font-bold text-slate-800 mt-1">
-                      Rp {(trialBalance?.totalDebit || 1000000).toLocaleString('id-ID')}
+                      Rp {(trialBalance?.totalDebit || 0).toLocaleString('id-ID')}
                     </div>
-                    <div className="text-xs text-emerald-700 mt-1 font-medium">Debit = Credit (Seimbang)</div>
+                    <div className="text-xs text-emerald-700 mt-1 font-medium">
+                      {trialBalance?.isBalanced ? 'Debit === Credit (Seimbang)' : 'Memuat Neraca...'}
+                    </div>
                   </div>
                   <div onClick={() => setCurrentView('inventory')} className="bg-white p-4 rounded border border-slate-200 cursor-pointer hover:border-slate-400 transition">
                     <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Aset & Inventaris</div>
-                    <div className="text-2xl font-bold text-slate-800 mt-1">{inventory.length || 3} Item</div>
+                    <div className="text-2xl font-bold text-slate-800 mt-1">{inventory.length} Item</div>
                     <div className="text-xs text-slate-600 mt-1 font-medium">Laptop, Seragam, & Buku</div>
                   </div>
                 </div>
@@ -315,7 +488,7 @@ export default function App() {
                 <div className="bg-white p-5 rounded border border-slate-200">
                   <h3 className="font-bold text-slate-800 text-sm mb-3">Selamat Datang di ERP Sekolah Harapan Bangsa</h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Sistem ini berjalan secara native di atas arsitektur <strong>Cloudflare Workers + D1 Database (SQLite Edge)</strong> dengan antarmuka <strong>React + Vite Monolith</strong>. Anda dapat mencoba navigasi modul, mencatat pembayaran, menginput presensi dan nilai ujian, serta mencetak rapor digital secara instan.
+                    Sistem ini berjalan di atas arsitektur <strong>Cloudflare Workers + D1 Database (SQLite Edge)</strong> dengan antarmuka <strong>React + Vite Monolith</strong>. Anda dapat mencoba navigasi modul, mencatat pembayaran, menginput presensi dan nilai ujian, serta mencetak rapor digital secara instan.
                   </p>
                 </div>
               </div>
@@ -341,7 +514,7 @@ export default function App() {
                         <td className="px-5 py-3 uppercase">{s.gender}</td>
                         <td className="px-5 py-3"><span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">{s.status}</span></td>
                         <td className="px-5 py-3 text-right space-x-1.5">
-                          <button onClick={() => openReportCard(s.id)} className="bg-purple-50 text-[#714B67] hover:bg-purple-100 px-2.5 py-1 rounded font-medium">Rapor</button>
+                          <button onClick={() => openReportCard(s)} className="bg-purple-50 text-[#714B67] hover:bg-purple-100 px-2.5 py-1 rounded font-medium">Rapor</button>
                           <button onClick={() => handleDelete(`/api/students/${s.id}`, s.name)} className="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded font-medium">Hapus</button>
                         </td>
                       </tr>
@@ -480,7 +653,8 @@ export default function App() {
                         <td className="px-5 py-3 font-mono">{ex.examDate}</td>
                         <td className="px-5 py-3 font-mono">{ex.passingMarks} / {ex.weightage}%</td>
                         <td className="px-5 py-3"><span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-100 text-[#714B67]">{ex.status}</span></td>
-                        <td className="px-5 py-3 text-right">
+                        <td className="px-5 py-3 text-right space-x-1.5">
+                          <button onClick={() => openGradeModal(ex)} className="bg-purple-50 text-[#714B67] hover:bg-purple-100 px-2.5 py-1 rounded font-medium">Input Nilai</button>
                           <button onClick={() => handleDelete(`/api/exams/sessions/${ex.id}`, ex.name)} className="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded font-medium">Hapus</button>
                         </td>
                       </tr>
@@ -510,7 +684,7 @@ export default function App() {
                       {invoices.map((inv) => (
                         <tr key={inv.id} className="hover:bg-slate-50">
                           <td className="px-5 py-3 font-mono font-bold text-slate-800">{inv.name}</td>
-                          <td className="px-5 py-3">{inv.studentId === 'std_andi' ? 'Andi Pratama' : 'Bella Cantika'}</td>
+                          <td className="px-5 py-3 font-medium">{getStudentName(inv.studentId)}</td>
                           <td className="px-5 py-3 font-mono">{inv.date}</td>
                           <td className="px-5 py-3 font-mono">Rp {(inv.amountTotal || 0).toLocaleString('id-ID')}</td>
                           <td className="px-5 py-3 font-mono text-rose-700 font-bold">Rp {(inv.amountResidual || 0).toLocaleString('id-ID')}</td>
@@ -523,9 +697,9 @@ export default function App() {
                           </td>
                           <td className="px-5 py-3 text-right space-x-1.5">
                             {inv.paymentState !== 'paid' && (
-                              <button onClick={() => openPaymentModal(inv)} className="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded font-medium">Catat Bayar</button>
+                              <button onClick={() => openPaymentModal(inv)} className="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded font-medium cursor-pointer">Catat Bayar</button>
                             )}
-                            <button onClick={() => handleDelete(`/api/finance/invoices/${inv.id}`, inv.name)} className="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded font-medium">Hapus</button>
+                            <button onClick={() => handleDelete(`/api/finance/invoices/${inv.id}`, inv.name)} className="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded font-medium cursor-pointer">Hapus</button>
                           </td>
                         </tr>
                       ))}
@@ -580,6 +754,212 @@ export default function App() {
         )}
       </main>
 
+      {/* Dynamic Create Modal */}
+      {activeModal === 'create' && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <h3 className="font-bold text-slate-800 text-base mb-4 capitalize">
+              Tambah Data {currentView}
+            </h3>
+
+            {currentView === 'academics' && (
+              <div className="flex border-b border-slate-200 mb-4 space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setAcademicTab('year')}
+                  className={`pb-2 text-xs font-semibold px-2 border-b-2 cursor-pointer ${
+                    academicTab === 'year' ? 'border-[#714B67] text-[#714B67]' : 'border-transparent text-slate-500'
+                  }`}
+                >
+                  Tahun Ajaran
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAcademicTab('subject')}
+                  className={`pb-2 text-xs font-semibold px-2 border-b-2 cursor-pointer ${
+                    academicTab === 'subject' ? 'border-[#714B67] text-[#714B67]' : 'border-transparent text-slate-500'
+                  }`}
+                >
+                  Mata Pelajaran
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateSubmit} className="space-y-3 text-xs">
+              {currentView === 'students' && (
+                <>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Nama Siswa *</label>
+                    <input name="name" type="text" placeholder="e.g. Dimas Anggara" className="w-full p-2 border rounded" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">NIS *</label>
+                      <input name="nis" type="text" placeholder="202601003" className="w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">NISN *</label>
+                      <input name="nisn" type="text" placeholder="0089123458" className="w-full p-2 border rounded" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Jenis Kelamin</label>
+                    <select name="gender" className="w-full p-2 border rounded bg-white">
+                      <option value="male">Laki-laki</option>
+                      <option value="female">Perempuan</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {currentView === 'academics' && academicTab === 'year' && (
+                <>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Nama Tahun Ajaran *</label>
+                    <input name="yearName" type="text" placeholder="e.g. 2026/2027" className="w-full p-2 border rounded" required />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Kode *</label>
+                    <input name="yearCode" type="text" placeholder="AY-2627" className="w-full p-2 border rounded" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Tanggal Mulai</label>
+                      <input name="startDate" type="date" defaultValue="2026-07-15" className="w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Tanggal Selesai</label>
+                      <input name="endDate" type="date" defaultValue="2027-06-25" className="w-full p-2 border rounded" required />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {currentView === 'academics' && academicTab === 'subject' && (
+                <>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Nama Mata Pelajaran *</label>
+                    <input name="subjName" type="text" placeholder="e.g. Sosiologi Dasar" className="w-full p-2 border rounded" required />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Kode Mapel *</label>
+                    <input name="subjCode" type="text" placeholder="SOS-10" className="w-full p-2 border rounded" required />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Tipe</label>
+                    <select name="subjType" className="w-full p-2 border rounded bg-white">
+                      <option value="compulsory">Wajib (Compulsory)</option>
+                      <option value="elective">Pilihan (Elective)</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {currentView === 'attendance' && (
+                <>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Tanggal Sesi Presensi</label>
+                    <input name="attDate" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-2 border rounded" required />
+                  </div>
+                  <div className="bg-slate-50 p-2.5 rounded border text-slate-600">
+                    Sesi presensi akan otomatis mengabsen seluruh siswa aktif di kelas X-MIPA-1 secara atomik batching ke D1.
+                  </div>
+                </>
+              )}
+
+              {currentView === 'exams' && (
+                <>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Nama Sesi Ujian *</label>
+                    <input name="examName" type="text" placeholder="e.g. UAS Matematika Semester Ganjil" className="w-full p-2 border rounded" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Tanggal Ujian</label>
+                      <input name="examDate" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Batas KKM</label>
+                      <input name="passingMarks" type="number" defaultValue="75" className="w-full p-2 border rounded" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Bobot Penilaian (%)</label>
+                    <input name="weightage" type="number" defaultValue="30" className="w-full p-2 border rounded" required />
+                  </div>
+                </>
+              )}
+
+              {currentView === 'inventory' && (
+                <>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Nama Barang / Aset *</label>
+                    <input name="prodName" type="text" placeholder="e.g. Proyektor Lab Epson EB-X400" className="w-full p-2 border rounded" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Kode *</label>
+                      <input name="prodCode" type="text" placeholder="AST-PRJ-01" className="w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Harga Standar (Rp)</label>
+                      <input name="prodPrice" type="number" defaultValue="6500000" className="w-full p-2 border rounded" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Tipe Produk</label>
+                    <select name="prodType" className="w-full p-2 border rounded bg-white">
+                      <option value="asset">Aset Sekolah (Asset)</option>
+                      <option value="storable">Barang Stok (Storable)</option>
+                      <option value="consumable">Habis Pakai (Consumable)</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <button type="button" onClick={() => setActiveModal(null)} className="px-3 py-1.5 border rounded cursor-pointer">Batal</button>
+                <button type="submit" className="px-3.5 py-1.5 bg-[#714B67] hover:bg-[#583950] text-white rounded font-semibold cursor-pointer">Simpan Data</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Grade Entry Modal */}
+      {activeModal === 'mark' && markTargetExam && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+            <h3 className="font-bold text-slate-800 text-base mb-1">Input Nilai Siswa (Gradebook)</h3>
+            <p className="text-xs text-slate-500 mb-4">{markTargetExam.name} (KKM: {markTargetExam.passingMarks})</p>
+
+            <form onSubmit={handleGradeSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Pilih Siswa *</label>
+                <select name="studentId" className="w-full p-2 border rounded bg-white" required>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.nis})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Nilai Diperoleh (0 - 100) *</label>
+                <input name="marksObtained" type="number" min="0" max="100" defaultValue="90" className="w-full p-2 border rounded font-bold" required />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Catatan Guru (Remark)</label>
+                <input name="remark" type="text" placeholder="e.g. Sangat baik dalam pemahaman konsep" className="w-full p-2 border rounded" />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <button type="button" onClick={() => setActiveModal(null)} className="px-3 py-1.5 border rounded cursor-pointer">Batal</button>
+                <button type="submit" className="px-3.5 py-1.5 bg-[#714B67] hover:bg-[#583950] text-white rounded font-semibold cursor-pointer">Simpan Nilai</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Payment Modal */}
       {activeModal === 'payment' && paymentTarget && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
@@ -612,8 +992,8 @@ export default function App() {
                 <input name="reference" type="text" placeholder="TRF-BCA-..." className="w-full p-2 border rounded" />
               </div>
               <div className="flex justify-end space-x-2 pt-4 border-t">
-                <button type="button" onClick={() => setActiveModal(null)} className="px-3 py-1.5 border rounded">Batal</button>
-                <button type="submit" className="px-3.5 py-1.5 bg-[#714B67] hover:bg-[#583950] text-white rounded font-semibold">Simpan Pembayaran</button>
+                <button type="button" onClick={() => setActiveModal(null)} className="px-3 py-1.5 border rounded cursor-pointer">Batal</button>
+                <button type="submit" className="px-3.5 py-1.5 bg-[#714B67] hover:bg-[#583950] text-white rounded font-semibold cursor-pointer">Simpan Pembayaran</button>
               </div>
             </form>
           </div>
@@ -629,17 +1009,20 @@ export default function App() {
                 <h3 className="font-bold text-slate-800 text-base">Rapor Digital Siswa</h3>
                 <p className="text-xs text-slate-500">{reportData.term || 'Semester Ganjil 2025/2026'}</p>
               </div>
-              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark"></i></button>
+              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><i className="fa-solid fa-xmark"></i></button>
             </div>
             <div className="space-y-4 text-xs">
               <div className="bg-purple-50/60 p-3.5 rounded border border-purple-100 flex justify-between items-center">
                 <div>
                   <div className="text-[11px] text-slate-500 uppercase font-semibold">Siswa</div>
-                  <div className="font-bold text-slate-800 text-sm">Andi Pratama</div>
+                  <div className="font-bold text-slate-800 text-sm">
+                    {selectedStudentForReport ? selectedStudentForReport.name : getStudentName(reportData.studentId)}
+                  </div>
+                  <div className="text-[11px] text-slate-500">NIS: {selectedStudentForReport?.nis || '-'}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-[11px] text-slate-500 uppercase font-semibold">Rata-rata Nilai (GPA)</div>
-                  <div className="font-mono text-xl font-bold text-[#714B67]">{reportData.summary?.averageScore || '89.0'}</div>
+                  <div className="font-mono text-xl font-bold text-[#714B67]">{reportData.summary?.averageScore || '0'}</div>
                 </div>
               </div>
 
@@ -652,9 +1035,9 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {(reportData.grades || []).map((g: any, idx: number) => (
+                  {(reportData.grades || []).map((g, idx) => (
                     <tr key={idx}>
-                      <td className="px-4 py-2.5 font-medium">{idx === 0 ? 'Matematika Wajib' : 'Fisika Dasar'}</td>
+                      <td className="px-4 py-2.5 font-medium">{g.subjectName || g.sessionId || `Mata Pelajaran ${idx + 1}`}</td>
                       <td className="px-4 py-2.5 font-bold font-mono">{g.marksObtained}</td>
                       <td className="px-4 py-2.5 font-bold text-[#714B67]">{g.grade}</td>
                     </tr>
@@ -663,7 +1046,7 @@ export default function App() {
               </table>
             </div>
             <div className="flex justify-end pt-4 border-t mt-4">
-              <button onClick={() => setActiveModal(null)} className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded font-medium text-xs">Tutup</button>
+              <button onClick={() => setActiveModal(null)} className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded font-medium text-xs cursor-pointer">Tutup</button>
             </div>
           </div>
         </div>
