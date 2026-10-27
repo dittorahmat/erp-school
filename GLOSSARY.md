@@ -45,14 +45,15 @@ Dokumen ini mendefinisikan istilah dan konsep kanonik yang digunakan dalam siste
 
 ---
 
-## 6. Akuntansi & Keuangan (Double-Entry Bookkeeping ala Odoo)
-- **Account (Bagan Akun / Chart of Accounts - COA)**: Akun penampung nilai finansial (`asset`, `liability`, `equity`, `income`, `expense`).
-- **Journal**: Kelompok pencatatan transaksi spesifik (`Sale / Tagihan Sekolah`, `Purchase / Pembelian`, `Bank`, `Cash`, `General / Miscellaneous`).
+## 6. Akuntansi & Keuangan (Double-Entry Bookkeeping ala Odoo & PSAK/ISAK 35)
+- **Account (Bagan Akun / Chart of Accounts - COA)**: Akun penampung nilai finansial terstruktur berbasis PSAK/ISAK 35 (`asset`, `liability`, `equity`, `income`, `expense`) dengan kode akun numerik hierarkis yang dapat dikonfigurasi dan disesuaikan oleh bendahara.
+- **Journal**: Kelompok pencatatan transaksi spesifik (`Sale / Tagihan Sekolah`, `Purchase / Pembelian`, `Bank`, `Cash`, `General / Miscellaneous`, `Payroll`).
 - **Journal Entry (`account.move`)**: Dokumen transaksi akuntansi berimbang (Total Debit = Total Credit) dengan status `draft` atau `posted`.
 - **Journal Item (`account.move.line`)**: Baris debit atau credit individual yang terikat pada suatu Account dan Partner.
 - **Student Invoice (Tagihan Biaya Siswa)**: Journal Entry bertipe `out_invoice` yang menagihkan biaya sekolah (SPP bulanan, Uang Gedung, Seragam).
 - **Payment (`account.payment`)**: Pembayaran kas/bank dari wali murid atau pengeluaran sekolah yang direkonsiliasi dengan Invoice atau Bill.
 - **Fee Structure / Rule**: Template biaya standar per Grade Level atau Program (misal: SPP Bulanan Rp 500.000).
+- **General Ledger (Buku Besar)**: Rekapitulasi mutasi debit, kredit, dan saldo berjalan per akun COA dalam rentang periode tertentu.
 
 ---
 
@@ -79,4 +80,12 @@ Dokumen ini mendefinisikan istilah dan konsep kanonik yang digunakan dalam siste
 
 ## 11. Portal Akses Siswa & Wali Murid (Parent & Student Self-Service)
 - **Portal Scope**: Filter otorisasi baris (Row-Level Security) berbasis kepemilikan data (`session.user.id` -> `student.user_id` atau `guardian.user_id`), membatasi akses baca data hanya pada jadwal, kehadiran, rapor, dan tagihan invoice milik siswa/anak yang bersangkutan.
+
+---
+
+## 12. Kepegawaian & Penggajian (HR & Payroll ala Odoo)
+- **Employee**: Entitas kanonik profil tenaga pendidik (`faculty`) maupun tenaga kependidikan/staf (`staff`), menyimpan NIP, jabatan, relasi ke user otentikasi, dan rincian bank pencairan gaji.
+- **Salary Structure / Contract**: Aturan kontrak kerja yang menetapkan tarif komponen gaji bagi pegawai: gaji pokok (*base salary*), honor per sesi mengajar, tunjangan tetap (*allowances*), serta potongan wajib (*deductions* seperti BPJS/kasbon).
+- **Payslip (`hr.payslip`)**: Dokumen rincian slip gaji individual seorang pegawai pada periode bulan tertentu, memuat breakdown penghasilan bruto, potongan, dan take-home pay (gaji bersih).
+- **Payslip Batch Run (`hr.payslip.run`)**: Proses kalkulasi dan penerbitan slip gaji massal seluruh guru/staf dalam satu unit sekolah, yang setelah divalidasi akan otomatis mengompilasi dan membukukan transaksi pengeluaran beban gaji (`account.move`) secara atomik ke buku besar.
 

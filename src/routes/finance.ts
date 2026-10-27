@@ -12,8 +12,48 @@ import type { Bindings } from "../index";
 export const financeRouter = new Hono<{ Bindings: Bindings }>();
 
 financeRouter.get("/accounts", async (c) => {
-  const accounts = await accountingEngine.getAccounts(c.env.DB);
+  const schoolId = c.req.query("schoolId");
+  const accounts = await accountingEngine.getAccounts(c.env.DB, schoolId);
   return c.json({ data: accounts });
+});
+
+financeRouter.post("/accounts", async (c) => {
+  const body = await c.req.json();
+  if (!body.schoolId || !body.code || !body.name || !body.type) {
+    return c.json({ error: "schoolId, code, name, and type are required" }, 400);
+  }
+  const account = await accountingEngine.createAccount(c.env.DB, body);
+  return c.json({ success: true, data: account }, 201);
+});
+
+financeRouter.put("/accounts/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const account = await accountingEngine.updateAccount(c.env.DB, id, body);
+  if (!account) {
+    return c.json({ error: "Account not found" }, 404);
+  }
+  return c.json({ success: true, data: account });
+});
+
+financeRouter.delete("/accounts/:id", async (c) => {
+  const id = c.req.param("id");
+  try {
+    const result = await accountingEngine.deleteAccount(c.env.DB, id);
+    return c.json({ success: true, data: result });
+  } catch (err: any) {
+    return c.json({ error: err.message || "Failed to delete account" }, 400);
+  }
+});
+
+financeRouter.post("/accounts/seed-psak", async (c) => {
+  const body = await c.req.json();
+  const schoolId = body.schoolId || c.req.header("x-school-id") || c.req.query("schoolId");
+  if (!schoolId) {
+    return c.json({ error: "schoolId is required" }, 400);
+  }
+  const result = await accountingEngine.seedPsakAccounts(c.env.DB, schoolId);
+  return c.json({ success: true, data: result }, 201);
 });
 
 financeRouter.get("/invoices", async (c) => {
@@ -64,7 +104,7 @@ financeRouter.get("/trial-balance", async (c) => {
 });
 
 financeRouter.get("/fee-categories", async (c) => {
-  const schoolId = c.req.query("schoolId") || "sch_01";
+  const schoolId = c.req.query("schoolId") || c.req.header("x-school-id") || "";
   const db = (c as any).var?.db;
   const categories = await listFeeCategories(db, schoolId);
   return c.json({ data: categories });
@@ -78,7 +118,7 @@ financeRouter.post("/fee-categories", async (c) => {
 });
 
 financeRouter.get("/fee-structures", async (c) => {
-  const schoolId = c.req.query("schoolId") || "sch_01";
+  const schoolId = c.req.query("schoolId") || c.req.header("x-school-id") || "";
   const db = (c as any).var?.db;
   const structures = await listFeeStructures(db, schoolId);
   return c.json({ data: structures });

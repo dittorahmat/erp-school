@@ -144,4 +144,23 @@ describe("Architecture Boundary Guardrail", () => {
       `Found attendance sheet vs line tally discrepancies:\n${discrepancies.join("\n")}`
     ).toEqual([]);
   });
+
+  it("should enforce multi-tenancy: route handlers must not hardcode default school tenant IDs", () => {
+    const violations: string[] = [];
+
+    for (const file of routeFiles) {
+      const filePath = path.join(routesDir, file);
+      const content = fs.readFileSync(filePath, "utf-8");
+
+      // Check for hardcoded school ID fallbacks like || "school_sma_hb" or || 'school_sma_hb'
+      if (/\|\|\s*['"]school_[a-zA-Z0-9_]+['"]/.test(content) || /\|\|\s*['"]sch_[a-zA-Z0-9_]+['"]/.test(content)) {
+        violations.push(`${file} contains hardcoded school tenant ID fallback. Tenant ID must be dynamically resolved from context.`);
+      }
+    }
+
+    expect(
+      violations,
+      `Found hardcoded tenant fallbacks in routes! Tenant ID must be explicit:\n${violations.join("\n")}`
+    ).toEqual([]);
+  });
 });

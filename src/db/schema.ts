@@ -504,3 +504,70 @@ export const libraryIssues = sqliteTable('library_issues', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
+
+// --------------------------------------------------------------------------
+// HR & Payroll (Odoo hr.employee, hr.contract, hr.payslip & hr.payslip.run)
+// --------------------------------------------------------------------------
+export const employees = sqliteTable('employees', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  userId: text('user_id').references(() => user.id),
+  name: text('name').notNull(),
+  nip: text('nip').notNull().unique(),
+  email: text('email').notNull(),
+  phone: text('phone'),
+  type: text('type').notNull().default('faculty'), // faculty (guru), staff (karyawan/TU)
+  department: text('department'), // e.g. "Kurikulum", "Tata Usaha", "Kesiswaan"
+  jobTitle: text('job_title').notNull(), // e.g. "Guru Matematika", "Staf Keuangan"
+  bankName: text('bank_name'), // e.g. "BCA", "BRI", "Mandiri"
+  bankAccountNumber: text('bank_account_number'),
+  status: text('status').notNull().default('active'), // active, inactive
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const salaryStructures = sqliteTable('salary_structures', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  employeeId: text('employee_id').notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  baseSalary: real('base_salary').notNull().default(0),
+  hourlyTeachingRate: real('hourly_teaching_rate').notNull().default(0),
+  fixedAllowance: real('fixed_allowance').notNull().default(0),
+  fixedDeduction: real('fixed_deduction').notNull().default(0),
+  status: text('status').notNull().default('active'), // active, archived
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const payslipBatchRuns = sqliteTable('payslip_batch_runs', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  name: text('name').notNull(), // e.g. "Gaji Guru & Staf Oktober 2026"
+  periodMonth: integer('period_month').notNull(),
+  periodYear: integer('period_year').notNull(),
+  totalAmount: real('total_amount').notNull().default(0),
+  totalEmployees: integer('total_employees').notNull().default(0),
+  status: text('status').notNull().default('draft'), // draft, confirmed
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+
+export const payslips = sqliteTable('payslips', {
+  id: text('id').primaryKey(),
+  schoolId: text('school_id').notNull().references(() => schools.id),
+  batchRunId: text('batch_run_id').references(() => payslipBatchRuns.id, { onDelete: 'cascade' }),
+  employeeId: text('employee_id').notNull().references(() => employees.id),
+  periodMonth: integer('period_month').notNull(),
+  periodYear: integer('period_year').notNull(),
+  baseSalary: real('base_salary').notNull().default(0),
+  teachingSessionsCount: integer('teaching_sessions_count').notNull().default(0),
+  teachingHonorAmount: real('teaching_honor_amount').notNull().default(0),
+  allowanceAmount: real('allowance_amount').notNull().default(0),
+  deductionAmount: real('deduction_amount').notNull().default(0),
+  netSalary: real('net_salary').notNull().default(0),
+  status: text('status').notNull().default('draft'), // draft, confirmed, paid, cancelled
+  moveId: text('move_id').references(() => accountMoves.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+

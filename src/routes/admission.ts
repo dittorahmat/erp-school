@@ -16,7 +16,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 // List / Create Admission Registers
 app.get('/registers', async (c) => {
-  const schoolId = c.req.query('schoolId') || 'sch_01';
+  const schoolId = c.req.query('schoolId') || c.req.header('x-school-id') || '';
   const db = (c as any).var?.db;
   const registers = await listAdmissionRegisters(db, schoolId);
   return c.json({ data: registers });

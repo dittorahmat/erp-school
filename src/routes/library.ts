@@ -13,7 +13,7 @@ export const libraryRouter = new Hono<{ Bindings: Bindings }>();
 
 // GET /api/library/media - Search and list cataloged media
 libraryRouter.get('/media', async (c) => {
-  const schoolId = c.req.query('schoolId') || 'sch_01';
+  const schoolId = c.req.query('schoolId') || c.req.header('x-school-id') || '';
   const search = c.req.query('q');
   const db = (c as any).var?.db;
   const items = await listLibraryMedia(db, schoolId, search);
@@ -31,7 +31,7 @@ libraryRouter.post('/media', async (c) => {
 
 // GET /api/library/issues - Circulation active / returned loans
 libraryRouter.get('/issues', async (c) => {
-  const schoolId = c.req.query('schoolId') || 'sch_01';
+  const schoolId = c.req.query('schoolId') || c.req.header('x-school-id') || '';
   const status = c.req.query('status');
   const studentId = c.req.query('studentId');
   const db = (c as any).var?.db;

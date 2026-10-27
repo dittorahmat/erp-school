@@ -19,6 +19,50 @@ describe("Double-Entry Accounting API", () => {
     expect(Array.isArray(data.data)).toBe(true);
   });
 
+  it("should create a new account in chart of accounts", async () => {
+    let insertedValues: any = null;
+    const mockEnv = {
+      DB: {
+        prepare: (query: string) => ({
+          bind: (...args: any[]) => ({
+            run: async () => {
+              insertedValues = args;
+              return { success: true };
+            },
+            raw: async () => []
+          })
+        })
+      }
+    };
+    const payload = {
+      schoolId: "school_sma_hb",
+      code: "1-1101",
+      name: "Kas Operasional",
+      type: "asset",
+      reconcile: true
+    };
+    const res = await app.request("/api/finance/accounts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }, mockEnv as any);
+
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as any;
+    expect(json.success).toBe(true);
+    expect(json.data.code).toBe("1-1101");
+  });
+
+  it("should reject account creation when required fields are missing", async () => {
+    const mockEnv = { DB: {} };
+    const res = await app.request("/api/finance/accounts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: "1-1101" })
+    }, mockEnv as any);
+    expect(res.status).toBe(400);
+  });
+
   it("should respond with 200 on GET /api/finance/invoices", async () => {
     const invoiceRow = [
       "inv_01",              // id

@@ -1,7 +1,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { eq, inArray, desc } from "drizzle-orm";
+import { eq, inArray, desc, sql } from "drizzle-orm";
 
 export interface PortalScope {
   role: string;
@@ -274,5 +274,27 @@ export const portalManagement = {
       grades: gradesReport.marks,
       invoices,
     };
+  },
+
+  /**
+   * Returns payslips for employee linked to userId.
+   */
+  async getEmployeePayslips(d1: D1Database, userId: string) {
+    const db = drizzle(d1, { schema });
+    // Resolve employee either linked via userId or matching direct employee id
+    const employees = await db
+      .select({ id: schema.employees.id })
+      .from(schema.employees)
+      .where(sql`${schema.employees.userId} = ${userId} OR ${schema.employees.id} = ${userId}`)
+      .limit(1);
+
+    const employeeId = employees[0]?.id;
+    if (!employeeId) return [];
+
+    return db
+      .select()
+      .from(schema.payslips)
+      .where(eq(schema.payslips.employeeId, employeeId))
+      .orderBy(desc(schema.payslips.createdAt));
   },
 };

@@ -3,6 +3,7 @@ import LoginView from './LoginView';
 import AdmissionView from './AdmissionView';
 import LibraryView from './LibraryView';
 import PortalView from './PortalView';
+import { PayrollView } from './PayrollView';
 import {
   DEMO_USERS,
   UserProfile,
@@ -40,6 +41,15 @@ export default function App() {
   const [exams, setExams] = useState<ExamSession[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [trialBalance, setTrialBalance] = useState<TrialBalanceReport | null>(null);
+  const [chartOfAccounts, setChartOfAccounts] = useState<ChartOfAccount[]>([]);
+  const [financeTab, setFinanceTab] = useState<'invoices' | 'coa'>('invoices');
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accountFormData, setAccountFormData] = useState<{ id?: string; code: string; name: string; type: 'asset' | 'liability' | 'equity' | 'income' | 'expense'; reconcile: boolean }>({
+    code: '',
+    name: '',
+    type: 'asset',
+    reconcile: false
+  });
   const [inventory, setInventory] = useState<InventoryProduct[]>([]);
   const [feeStructures, setFeeStructures] = useState<any[]>([]);
   const [showBatchFeeModal, setShowBatchFeeModal] = useState(false);
@@ -118,14 +128,17 @@ export default function App() {
         setExams(json.data || []);
       }
       if (currentView === 'finance' || currentView === 'dashboard') {
-        const [invRes, tbRes] = await Promise.all([
+        const [invRes, tbRes, coaRes] = await Promise.all([
           fetch('/api/finance/invoices'),
-          fetch('/api/finance/trial-balance')
+          fetch('/api/finance/trial-balance'),
+          fetch('/api/finance/accounts')
         ]);
         const invJson = await invRes.json();
         const tbJson = await tbRes.json();
+        const coaJson = await coaRes.json();
         setInvoices(invJson.data || []);
         setTrialBalance(tbJson);
+        setChartOfAccounts(coaJson.data || []);
       }
       if (currentView === 'inventory' || currentView === 'dashboard') {
         const res = await fetch('/api/inventory/products');
@@ -409,7 +422,7 @@ export default function App() {
           <nav className="hidden md:flex space-x-1 text-xs pl-3 overflow-x-auto">
             {(currentUser.role === 'student' || currentUser.role === 'guardian'
               ? ['portal']
-              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'inventory', 'library', 'portal']
+              : ['dashboard', 'admission', 'students', 'academics', 'attendance', 'exams', 'finance', 'payroll', 'inventory', 'library', 'portal']
             ).map((view) => (
               <button
                 key={view}
@@ -430,6 +443,8 @@ export default function App() {
                   ? 'Ujian & Nilai'
                   : view === 'finance'
                   ? 'Keuangan (SPP)'
+                  : view === 'payroll'
+                  ? 'HR & Penggajian'
                   : view === 'inventory'
                   ? 'Inventaris'
                   : view === 'library'
@@ -529,6 +544,7 @@ export default function App() {
           <>
             {currentView === 'admission' && <AdmissionView />}
             {currentView === 'library' && <LibraryView />}
+            {currentView === 'payroll' && <PayrollView />}
             {currentView === 'portal' && <PortalView currentUser={currentUser} />}
 
             {currentView === 'dashboard' && (
@@ -741,65 +757,181 @@ export default function App() {
 
             {currentView === 'finance' && (
               <div className="space-y-6">
-                <div className="bg-white rounded border border-slate-200 overflow-hidden">
-                  
-                  <div className="p-3.5 border-b border-slate-200 font-bold text-slate-800 text-xs flex justify-between items-center">
-                    <span>Daftar Tagihan Siswa (Invoices)</span>
-                    <button
-                      onClick={() => { setBatchFeeStep('config'); setShowBatchFeeModal(true); }}
-                      className="bg-[#714B67] hover:bg-[#583950] text-white px-3 py-1 rounded text-xs font-semibold cursor-pointer"
-                    >
-                      + Generate SPP Bulanan Massal
-                    </button>
-                  </div>
-
-                  <table className="w-full text-left text-xs text-slate-700">
-                    <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
-                      <tr>
-                        <th className="px-5 py-2.5">Nomor Invoice</th>
-                        <th className="px-5 py-2.5">Siswa</th>
-                        <th className="px-5 py-2.5">Tanggal</th>
-                        <th className="px-5 py-2.5">Total Biaya</th>
-                        <th className="px-5 py-2.5">Sisa (Residual)</th>
-                        <th className="px-5 py-2.5">Status Bayar</th>
-                        <th className="px-5 py-2.5 text-right">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {invoices.map((inv) => (
-                        <tr key={inv.id} className="hover:bg-slate-50">
-                          <td className="px-5 py-3 font-mono font-bold text-slate-800">{inv.name}</td>
-                          <td className="px-5 py-3 font-medium">{getStudentName(inv.studentId)}</td>
-                          <td className="px-5 py-3 font-mono">{inv.date}</td>
-                          <td className="px-5 py-3 font-mono">Rp {(inv.amountTotal || 0).toLocaleString('id-ID')}</td>
-                          <td className="px-5 py-3 font-mono text-rose-700 font-bold">Rp {(inv.amountResidual || 0).toLocaleString('id-ID')}</td>
-                          <td className="px-5 py-3">
-                            <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                              inv.paymentState === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                            }`}>
-                              {inv.paymentState === 'paid' ? 'Lunas' : 'Belum Bayar'}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-right space-x-1.5">
-                            {inv.paymentState !== 'paid' && (
-                              <button onClick={() => openPaymentModal(inv)} className="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded font-medium cursor-pointer">Catat Bayar</button>
-                            )}
-                            <button onClick={() => handleDelete(`/api/finance/invoices/${inv.id}`, inv.name)} className="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded font-medium cursor-pointer">Hapus</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex border-b border-slate-200 gap-4 mb-2">
+                  <button
+                    onClick={() => setFinanceTab('invoices')}
+                    className={`pb-2 text-xs font-semibold cursor-pointer ${
+                      financeTab === 'invoices' ? 'border-b-2 border-[#714B67] text-[#714B67]' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Tagihan & Pembayaran (Invoices)
+                  </button>
+                  <button
+                    onClick={() => setFinanceTab('coa')}
+                    className={`pb-2 text-xs font-semibold cursor-pointer ${
+                      financeTab === 'coa' ? 'border-b-2 border-[#714B67] text-[#714B67]' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Bagan Akun PSAK (Chart of Accounts)
+                  </button>
                 </div>
 
-                {trialBalance && (
-                  <div className="bg-white p-4 rounded border border-slate-200">
-                    <div className="text-xs font-bold text-slate-800 uppercase mb-2">Audit Keseimbangan Neraca Saldo (Trial Balance)</div>
-                    <div className="flex items-center gap-6 text-xs">
-                      <div>Total Debit: <strong className="font-mono text-slate-800">Rp {trialBalance.totalDebit?.toLocaleString('id-ID')}</strong></div>
-                      <div>Total Credit: <strong className="font-mono text-slate-800">Rp {trialBalance.totalCredit?.toLocaleString('id-ID')}</strong></div>
-                      <div>Status: <span className="text-emerald-700 font-bold">Debit === Credit (100% Balanced)</span></div>
+                {financeTab === 'invoices' ? (
+                  <>
+                    <div className="bg-white rounded border border-slate-200 overflow-hidden">
+                      <div className="p-3.5 border-b border-slate-200 font-bold text-slate-800 text-xs flex justify-between items-center">
+                        <span>Daftar Tagihan Siswa (Invoices)</span>
+                        <button
+                          onClick={() => { setBatchFeeStep('config'); setShowBatchFeeModal(true); }}
+                          className="bg-[#714B67] hover:bg-[#583950] text-white px-3 py-1 rounded text-xs font-semibold cursor-pointer"
+                        >
+                          + Generate SPP Bulanan Massal
+                        </button>
+                      </div>
+
+                      <table className="w-full text-left text-xs text-slate-700">
+                        <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                          <tr>
+                            <th className="px-5 py-2.5">Nomor Invoice</th>
+                            <th className="px-5 py-2.5">Siswa</th>
+                            <th className="px-5 py-2.5">Tanggal</th>
+                            <th className="px-5 py-2.5">Total Biaya</th>
+                            <th className="px-5 py-2.5">Sisa (Residual)</th>
+                            <th className="px-5 py-2.5">Status Bayar</th>
+                            <th className="px-5 py-2.5 text-right">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {invoices.map((inv) => (
+                            <tr key={inv.id} className="hover:bg-slate-50">
+                              <td className="px-5 py-3 font-mono font-bold text-slate-800">{inv.name}</td>
+                              <td className="px-5 py-3 font-medium">{getStudentName(inv.studentId)}</td>
+                              <td className="px-5 py-3 font-mono">{inv.date}</td>
+                              <td className="px-5 py-3 font-mono">Rp {(inv.amountTotal || 0).toLocaleString('id-ID')}</td>
+                              <td className="px-5 py-3 font-mono text-rose-700 font-bold">Rp {(inv.amountResidual || 0).toLocaleString('id-ID')}</td>
+                              <td className="px-5 py-3">
+                                <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                  inv.paymentState === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                }`}>
+                                  {inv.paymentState === 'paid' ? 'Lunas' : 'Belum Bayar'}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-right space-x-1.5">
+                                {inv.paymentState !== 'paid' && (
+                                  <button onClick={() => openPaymentModal(inv)} className="bg-[#714B67] hover:bg-[#583950] text-white px-2.5 py-1 rounded font-medium cursor-pointer">Catat Bayar</button>
+                                )}
+                                <button onClick={() => handleDelete(`/api/finance/invoices/${inv.id}`, inv.name)} className="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded font-medium cursor-pointer">Hapus</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
+
+                    {trialBalance && (
+                      <div className="bg-white p-4 rounded border border-slate-200">
+                        <div className="text-xs font-bold text-slate-800 uppercase mb-2">Audit Keseimbangan Neraca Saldo (Trial Balance)</div>
+                        <div className="flex items-center gap-6 text-xs">
+                          <div>Total Debit: <strong className="font-mono text-slate-800">Rp {trialBalance.totalDebit?.toLocaleString('id-ID')}</strong></div>
+                          <div>Total Credit: <strong className="font-mono text-slate-800">Rp {trialBalance.totalCredit?.toLocaleString('id-ID')}</strong></div>
+                          <div>Status: <span className="text-emerald-700 font-bold">Debit === Credit (100% Balanced)</span></div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-white rounded border border-slate-200 overflow-hidden">
+                    <div className="p-3.5 border-b border-slate-200 font-bold text-slate-800 text-xs flex justify-between items-center">
+                      <div>
+                        <span>Bagan Akun Standar PSAK / ISAK 35</span>
+                        <span className="ml-2 text-slate-400 font-normal">({chartOfAccounts.length} Akun Terdaftar)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            if (confirm('Inisialisasi akun standar PSAK untuk sekolah?')) {
+                              await fetch('/api/finance/accounts/seed-psak', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ schoolId: 'school_sma_hb' })
+                              });
+                              fetchData();
+                            }
+                          }}
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded text-xs font-semibold cursor-pointer"
+                        >
+                          Auto-Seed PSAK
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAccountFormData({ code: '', name: '', type: 'asset', reconcile: false });
+                            setShowAccountModal(true);
+                          }}
+                          className="bg-[#714B67] hover:bg-[#583950] text-white px-3 py-1 rounded text-xs font-semibold cursor-pointer"
+                        >
+                          + Tambah Akun
+                        </button>
+                      </div>
+                    </div>
+
+                    <table className="w-full text-left text-xs text-slate-700">
+                      <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-5 py-2.5">Kode Akun</th>
+                          <th className="px-5 py-2.5">Nama Akun</th>
+                          <th className="px-5 py-2.5">Klasifikasi PSAK</th>
+                          <th className="px-5 py-2.5">Rekonsiliasi</th>
+                          <th className="px-5 py-2.5 text-right">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {chartOfAccounts.map((acc) => (
+                          <tr key={acc.id} className="hover:bg-slate-50">
+                            <td className="px-5 py-3 font-mono font-bold text-slate-800">{acc.code}</td>
+                            <td className="px-5 py-3 font-medium">{acc.name}</td>
+                            <td className="px-5 py-3">
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
+                                acc.type === 'asset' ? 'bg-blue-100 text-blue-800' :
+                                acc.type === 'liability' ? 'bg-amber-100 text-amber-800' :
+                                acc.type === 'equity' ? 'bg-purple-100 text-purple-800' :
+                                acc.type === 'income' ? 'bg-emerald-100 text-emerald-800' :
+                                'bg-rose-100 text-rose-800'
+                              }`}>
+                                {acc.type}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className={`text-[11px] ${acc.reconcile ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
+                                {acc.reconcile ? 'Ya (Bank/Piutang/Utang)' : 'Tidak'}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-right space-x-1.5">
+                              <button
+                                onClick={() => {
+                                  setAccountFormData({
+                                    id: acc.id,
+                                    code: acc.code,
+                                    name: acc.name,
+                                    type: acc.type,
+                                    reconcile: Boolean(acc.reconcile)
+                                  });
+                                  setShowAccountModal(true);
+                                }}
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded font-medium cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(`/api/finance/accounts/${acc.id}`, acc.name)}
+                                className="bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded font-medium cursor-pointer"
+                              >
+                                Hapus
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -1312,6 +1444,113 @@ export default function App() {
             <div className="flex justify-end pt-4 border-t mt-4">
               <button onClick={() => setActiveModal(null)} className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded font-medium text-xs cursor-pointer">Tutup</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account Modal (COA) */}
+      {showAccountModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+            <h3 className="font-bold text-slate-800 text-base mb-1">
+              {accountFormData.id ? 'Edit Akun COA' : 'Tambah Akun Baru (PSAK)'}
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">Konfigurasi bagan akun buku besar sekolah</p>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const url = accountFormData.id
+                    ? `/api/finance/accounts/${accountFormData.id}`
+                    : '/api/finance/accounts';
+                  const method = accountFormData.id ? 'PUT' : 'POST';
+                  const payload = {
+                    ...accountFormData,
+                    schoolId: 'school_sma_hb'
+                  };
+                  const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                  });
+                  if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Gagal menyimpan akun');
+                  }
+                  setShowAccountModal(false);
+                  fetchData();
+                } catch (err: any) {
+                  alert(err.message);
+                }
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Kode Akun (PSAK) *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 1-1103 atau 5-1103"
+                  value={accountFormData.code}
+                  onChange={(e) => setAccountFormData({ ...accountFormData, code: e.target.value })}
+                  className="w-full p-2 border rounded font-mono font-bold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Nama Akun *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Kas Kecil Operasional"
+                  value={accountFormData.name}
+                  onChange={(e) => setAccountFormData({ ...accountFormData, name: e.target.value })}
+                  className="w-full p-2 border rounded font-medium"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Klasifikasi Akun</label>
+                <select
+                  value={accountFormData.type}
+                  onChange={(e) => setAccountFormData({ ...accountFormData, type: e.target.value as any })}
+                  className="w-full p-2 border rounded bg-white"
+                >
+                  <option value="asset">Aset (1-xxxx)</option>
+                  <option value="liability">Kewajiban / Liabilitas (2-xxxx)</option>
+                  <option value="equity">Aset Bersih / Ekuitas (3-xxxx)</option>
+                  <option value="income">Pendapatan (4-xxxx)</option>
+                  <option value="expense">Beban Operasional (5-xxxx)</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="reconcile"
+                  checked={accountFormData.reconcile}
+                  onChange={(e) => setAccountFormData({ ...accountFormData, reconcile: e.target.checked })}
+                  className="cursor-pointer"
+                />
+                <label htmlFor="reconcile" className="text-slate-700 font-medium cursor-pointer">
+                  Aktifkan Rekonsiliasi (Wajib untuk Kas/Bank, Piutang, dan Utang)
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowAccountModal(false)}
+                  className="px-3 py-1.5 border rounded cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 bg-[#714B67] hover:bg-[#583950] text-white rounded font-semibold cursor-pointer"
+                >
+                  Simpan Akun
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

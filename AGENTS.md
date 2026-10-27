@@ -48,5 +48,6 @@ Single-context repo (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
   - Wajib jalankan `npm run build`, `npm run typecheck`, dan `npm run test` sebelum commit atau merge ke `main`.
   - Kolom SQL D1 wajib berformat `snake_case`, cocokkan dengan pemetaan `drizzle-orm` di `src/db/schema.ts`.
   - Transaksi akuntansi wajib berimbang Debit = Credit (`/api/finance/trial-balance`).
-- **Domain Integration & Client Rules Pointer**:
-  - Untuk aturan lengkap mengenai canonical parameter domain module, multi-child portal fallback, preview batch invoicing, dan isolasi domain frontend: **lihat `CODING_STANDARDS.md` §7 & §8**.
+- **Domain Integration & Accounting Standards Pointer**:
+  - Untuk aturan lengkap mengenai canonical parameter domain module, multi-child portal fallback, preview batch invoicing, resolusi dinamis COA PSAK, serta jurnal bruto payroll: **lihat `CODING_STANDARDS.md` §7, §8, & §9**.
+
