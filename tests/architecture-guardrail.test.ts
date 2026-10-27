@@ -53,11 +53,72 @@ describe("Architecture Boundary Guardrail", () => {
       if (/receivableAccountId:\s*['"]coa_/i.test(content) || /incomeAccountId:\s*['"]coa_/i.test(content)) {
         violations.push(`${file} hardcodes COA account IDs; general ledger account assignment must be resolved by the backend domain.`);
       }
+      if (/academicYearId:\s*['"]ay_202/i.test(content)) {
+        violations.push(`${file} hardcodes academicYearId literal; active academic year must be dynamically resolved from state or API.`);
+      }
     }
 
     expect(
       violations,
       `Found client domain leakage violations! Domain logic must stay in backend:\n${violations.join("\n")}`
+    ).toEqual([]);
+  });
+
+  it("should enforce mathematical consistency in seed attendance records: sheet tallies must match line counts", () => {
+    const seedPath = path.resolve(__dirname, "../src/db/seed.sql");
+    expect(fs.existsSync(seedPath)).toBe(true);
+
+    const seedContent = fs.readFileSync(seedPath, "utf-8");
+
+    // Extract attendance sheets: ('att_xxx', ..., total_present, total_absent, total_sick, total_excused, ...)
+    const sheetRegex = /\('(?<id>att_[^']+)',\s*'[^']+',\s*'[^']+',\s*'[^']+',\s*'[^']+',\s*'[^']+',\s*'[^']+',\s*(?<p>\d+),\s*(?<a>\d+),\s*(?<s>\d+),\s*(?<e>\d+)/g;
+    const lineRegex = /\('(?<lineId>attl_[^']+)',\s*'(?<sheetId>att_[^']+)',\s*'[^']+',\s*'(?<status>present|absent|sick|excused)'/g;
+
+    const sheets = new Map<string, { present: number; absent: number; sick: number; excused: number }>();
+    for (const match of seedContent.matchAll(sheetRegex)) {
+      if (match.groups) {
+        sheets.set(match.groups.id, {
+          present: Number(match.groups.p),
+          absent: Number(match.groups.a),
+          sick: Number(match.groups.s),
+          excused: Number(match.groups.e),
+        });
+      }
+    }
+
+    const lineCounts = new Map<string, { present: number; absent: number; sick: number; excused: number }>();
+    for (const match of seedContent.matchAll(lineRegex)) {
+      if (match.groups) {
+        const { sheetId, status } = match.groups;
+        if (!lineCounts.has(sheetId)) {
+          lineCounts.set(sheetId, { present: 0, absent: 0, sick: 0, excused: 0 });
+        }
+        const counts = lineCounts.get(sheetId)!;
+        if (status === "present") counts.present++;
+        if (status === "absent") counts.absent++;
+        if (status === "sick") counts.sick++;
+        if (status === "excused") counts.excused++;
+      }
+    }
+
+    const discrepancies: string[] = [];
+    for (const [sheetId, sheetTally] of sheets) {
+      const lines = lineCounts.get(sheetId) || { present: 0, absent: 0, sick: 0, excused: 0 };
+      if (
+        sheetTally.present !== lines.present ||
+        sheetTally.absent !== lines.absent ||
+        sheetTally.sick !== lines.sick ||
+        sheetTally.excused !== lines.excused
+      ) {
+        discrepancies.push(
+          `Sheet ${sheetId} tally mismatch! Header: P=${sheetTally.present}, A=${sheetTally.absent}, S=${sheetTally.sick}, E=${sheetTally.excused}. Actual Lines: P=${lines.present}, A=${lines.absent}, S=${lines.sick}, E=${lines.excused}`
+        );
+      }
+    }
+
+    expect(
+      discrepancies,
+      `Found attendance sheet vs line tally discrepancies:\n${discrepancies.join("\n")}`
     ).toEqual([]);
   });
 });
